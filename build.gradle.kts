@@ -24,6 +24,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(gradleTestKit())
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
+    testImplementation("io.mockk:mockk:1.13.5")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 tasks.test {
@@ -46,7 +47,7 @@ gradlePlugin {
             displayName = "Android Auto Translations"
             description = "Automatically translate your strings.xml via external APIs"
             tags = listOf("android", "translation", "ai")
-            implementationClass = "io.github.philkes.android.translations.converter.AndroidTranslationsConverterPlugin"
+            implementationClass = "io.github.philkes.android.auto.translation.AndroidAutoTranslationPlugin"
         }
     }
 }
