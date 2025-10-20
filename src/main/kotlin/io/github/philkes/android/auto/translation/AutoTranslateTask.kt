@@ -2,6 +2,8 @@ package io.github.philkes.android.auto.translation
 
 import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
 import io.github.philkes.android.auto.translation.provider.GoogleTranslationService
+import io.github.philkes.android.auto.translation.provider.AzureTranslationService
+import io.github.philkes.android.auto.translation.provider.ProviderConfig
 import io.github.philkes.android.auto.translation.provider.TranslationProvider
 import io.github.philkes.android.auto.translation.provider.TranslationService
 import io.github.philkes.android.auto.translation.util.StringsXmlHelper
@@ -57,6 +59,14 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
     @get:Optional
     abstract val resDir: DirectoryProperty
 
+    /**
+     * Generic provider-specific configuration exposed via DSL.
+     * For Azure, set at least providerConfig.azure.region.
+     */
+    @get:Nested
+    @get:Optional
+    val providerConfig: ProviderConfig = project.objects.newInstance(ProviderConfig::class.java)
+
     // Optional provider override for testing via secondary constructor
     private var overrideProvider: TranslationService? = null
 
@@ -107,6 +117,19 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                     throw GradleException("Google provider selected but no API key provided. Set autoTranslate.apiKey.")
                 } else {
                     GoogleTranslationService(key)
+                }
+            }
+            TranslationProvider.AZURE -> {
+                val key = apiKey.orNull
+                if (key.isNullOrBlank()) {
+                    throw GradleException("Azure provider selected but no API key provided. Set autoTranslate.apiKey.")
+                } else {
+                    val region = providerConfig.azure.region.orNull
+                    if (region.isNullOrBlank()) {
+                        throw GradleException("Azure provider selected but no region provided. Set autoTranslate.providerConfig.azure.region.")
+                    }
+                    val endpoint = providerConfig.azure.endpoint.orNull ?: "https://api.cognitive.microsofttranslator.com"
+                    AzureTranslationService(key, region, endpoint)
                 }
             }
         }
