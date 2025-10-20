@@ -1,0 +1,1 @@
+# Android Auto Translation Plugin
