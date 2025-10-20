@@ -1,67 +1,79 @@
 package io.github.philkes.android.auto.translation
 
-import io.github.philkes.android.auto.translation.provider.DeepLTranslationProvider
+import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
+import io.github.philkes.android.auto.translation.provider.GoogleTranslationService
 import io.github.philkes.android.auto.translation.provider.TranslationProvider
+import io.github.philkes.android.auto.translation.provider.TranslationService
+import io.github.philkes.android.auto.translation.util.StringsXmlHelper
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import java.io.File
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.transform.OutputKeys
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.StreamResult
-import org.w3c.dom.Document
-import org.w3c.dom.Element
 
+/**
+ * Translates all missing strings.xml Strings via external translation provider.
+ */
 abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
 
+    /**
+     * Provider service for the translation
+     */
     @get:Input
-    abstract val provider: Property<String>
+    abstract val provider: Property<TranslationProvider>
 
+    /**
+     * API Key used for authentication for the selected `provider`
+     */
     @get:Input
     @get:Optional
     abstract val apiKey: Property<String>
 
+    /**
+     * Language of the source strings (`src/main/res/values/strings.xml`).
+     * Defaults to: 'en'
+     */
     @get:Input
     @get:Optional
     abstract val sourceLanguage: Property<String>
 
+    /**
+     * Language ISO-Codes (from `values-{iso-code}` folder names) to translate.
+     * By defaults detects all available langauges from the `src/main/res` folder.
+     */
     @get:Input
     @get:Optional
     abstract val targetLanguages: ListProperty<String>
 
+    /**
+     * Path to the folder containing the `values-{iso-code}` folders.
+     * Defaults to `${projectDir}/src/main/res`
+     */
     @get:InputDirectory
+    @get:Optional
     abstract val resDir: DirectoryProperty
 
-    @get:Input
-    abstract val detectLanguagesFromProject: Property<Boolean>
-
     // Optional provider override for testing via secondary constructor
-    private var overrideProvider: TranslationProvider? = null
+    private var overrideProvider: TranslationService? = null
 
     // Secondary constructor intended for tests to override provider
-    constructor(translationProvider: TranslationProvider) : this() {
-        this.overrideProvider = translationProvider
+    constructor(translationService: TranslationService) : this() {
+        this.overrideProvider = translationService
     }
 
     // Setter to override provider in tests when default constructor is used
-    fun setTranslationProviderForTesting(provider: TranslationProvider) {
+    fun setTranslationProviderForTesting(provider: TranslationService) {
         this.overrideProvider = provider
     }
 
     init {
         description = "Auto-translate Android strings.xml files"
         group = "translations"
-
         // Defaults
-        provider.convention("deepl")
-        detectLanguagesFromProject.convention(true)
         resDir.convention(project.layout.projectDirectory.dir("src/main/res"))
         sourceLanguage.convention("en")
         targetLanguages.convention(emptyList())
@@ -70,37 +82,42 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
     @TaskAction
     fun translate() {
         val res = resDir.get().asFile
-        val chosenProvider = provider.get().lowercase()
+        val chosenProvider = provider.getOrNull()
+        if (chosenProvider == null) {
+            throw GradleException("No 'provider' configured. Supported providers: ${TranslationProvider.values().toList()}")
+        }
         val langs = resolveTargetLanguages(res)
         if (langs.isEmpty()) {
             logger.lifecycle("No target languages resolved. Nothing to translate.")
             return
         }
-        val translationProvider: TranslationProvider? = overrideProvider ?: when (chosenProvider) {
-            "deepl" -> {
+        val xml = StringsXmlHelper(logger)
+        val translationService: TranslationService = overrideProvider ?: when (chosenProvider) {
+            TranslationProvider.DEEPL -> {
                 val key = apiKey.orNull
                 if (key.isNullOrBlank()) {
-                    logger.warn("No API key provided for DeepL. Skipping actual translation; dry-run only.")
-                    null
+                    throw GradleException("DeepL provider selected but no API key provided. Set autoTranslate.apiKey.")
                 } else {
-                    DeepLTranslationProvider(key)
+                    DeepLTranslationService(key)
                 }
             }
-            else -> null
-        }
-        if (translationProvider == null){
-            logger.warn("No valid translation provider '$chosenProvider' configured. Supported: deepl. Skipping.")
-            return
+            TranslationProvider.GOOGLE -> {
+                val key = apiKey.orNull
+                if (key.isNullOrBlank()) {
+                    throw GradleException("Google provider selected but no API key provided. Set autoTranslate.apiKey.")
+                } else {
+                    GoogleTranslationService(key)
+                }
+            }
         }
         logger.log(LogLevel.LIFECYCLE, "AutoTranslateTask: provider=$chosenProvider, resDir=${res.absolutePath}, targetLanguages=$langs")
         val baseDir = File(res, "values")
         val baseFile = File(baseDir, "strings.xml")
         if (!baseFile.exists()) {
-            logger.warn("Base strings.xml not found at ${baseFile.absolutePath}. Nothing to translate.")
-            return
+            throw GradleException("Base strings.xml not found at ${baseFile.absolutePath}. Ensure your project contains src/main/res/values/strings.xml or configure resDir accordingly.")
         }
 
-        val baseStrings = parseStringsXml(baseFile)
+        val baseStrings = xml.parse(baseFile)
         if (baseStrings.isEmpty()) {
             logger.lifecycle("No translatable <string> entries found in base strings.xml. Nothing to do.")
             return
@@ -110,7 +127,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
             val targetDir = File(res, "values-$lang")
             val targetFile = File(targetDir, "strings.xml")
 
-            val existing = if (targetFile.exists()) parseStringsXml(targetFile) else emptyMap()
+            val existing = if (targetFile.exists()) xml.parse(targetFile) else emptyMap()
             val missingKeys = baseStrings.keys.filter { it !in existing.keys }
             if (missingKeys.isEmpty()) {
                 logger.lifecycle("[$lang] All strings already present (${existing.size}). Skipping.")
@@ -119,22 +136,20 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
 
             val textsToTranslate = missingKeys.map { key -> baseStrings[key] ?: "" }
             val translated: List<String> = try {
-                translationProvider.translateBatch(textsToTranslate, sourceLanguage.getOrElse("en"), lang)
+                translationService.translateBatch(textsToTranslate, sourceLanguage.getOrElse("en"), lang)
             } catch (e: Exception) {
-                logger.warn("[$lang] Translation failed: ${'$'}{e.message}")
+                logger.error("[$lang] Translation failed: ${e.message}", e)
                 return@forEach
             }
 
             val additions = missingKeys.zip(translated).toMap()
             val merged = LinkedHashMap<String, String>().apply {
-                // preserve base order for missing ones; for existing keep their current order when writing
                 putAll(existing)
                 additions.forEach { (k, v) -> this[k] = v }
             }
 
-            // Ensure directory exists
             if (!targetDir.exists()) targetDir.mkdirs()
-            writeStringsXml(targetFile, merged)
+            xml.write(targetFile, merged)
             logger.lifecycle("[$lang] Wrote ${additions.size} new translations. Total strings now: ${merged.size}.")
         }
     }
@@ -142,7 +157,6 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
     private fun resolveTargetLanguages(res: File): List<String> {
         val explicit = targetLanguages.getOrElse(emptyList())
         if (explicit.isNotEmpty()) return explicit
-        if (!detectLanguagesFromProject.get()) return emptyList()
 
         val locales = mutableSetOf<String>()
         if (res.exists()) {
@@ -160,59 +174,4 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
         return locales.sorted()
     }
 
-    private fun parseStringsXml(file: File): Map<String, String> {
-        return try {
-            val dbf = DocumentBuilderFactory.newInstance()
-            dbf.isNamespaceAware = true
-            val builder = dbf.newDocumentBuilder()
-            val doc = builder.parse(file)
-            val list = doc.getElementsByTagName("string")
-            val map = LinkedHashMap<String, String>()
-            for (i in 0 until list.length) {
-                val node = list.item(i)
-                if (node is Element) {
-                    val name = node.getAttribute("name")
-                    val translatable = node.getAttribute("translatable")
-                    if (name.isNullOrBlank()) continue
-                    if (translatable.equals("false", ignoreCase = true)) continue
-                    val text = node.textContent ?: ""
-                    map[name] = text
-                }
-            }
-            map
-        } catch (e: Exception) {
-            logger.warn("Failed to parse strings.xml at ${'$'}{file.absolutePath}: ${'$'}{e.message}")
-            emptyMap()
-        }
-    }
-
-    private fun writeStringsXml(file: File, entries: Map<String, String>) {
-        try {
-            val doc = newDocument()
-            val resources = doc.createElement("resources")
-            doc.appendChild(resources)
-            // Write in sorted order for determinism
-            entries.toSortedMap().forEach { (name, value) ->
-                val el = doc.createElement("string")
-                el.setAttribute("name", name)
-                el.appendChild(doc.createTextNode(value))
-                resources.appendChild(el)
-            }
-
-            val tf = TransformerFactory.newInstance()
-            val transformer = tf.newTransformer()
-            transformer.setOutputProperty(OutputKeys.ENCODING, StandardCharsets.UTF_8.name())
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
-            transformer.transform(DOMSource(doc), StreamResult(file))
-        } catch (e: Exception) {
-            logger.warn("Failed to write strings.xml at ${'$'}{file.absolutePath}: ${'$'}{e.message}")
-        }
-    }
-
-    private fun newDocument(): Document {
-        val dbf = DocumentBuilderFactory.newInstance()
-        dbf.isNamespaceAware = true
-        return dbf.newDocumentBuilder().newDocument()
-    }
 }

@@ -3,7 +3,7 @@ package io.github.philkes.android.auto.translation.provider
 import com.deepl.api.DeepLClient
 import com.deepl.api.TextResult
 
-class DeepLTranslationProvider(private val client: DeepLClient) : TranslationProvider {
+class DeepLTranslationService(private val client: DeepLClient) : TranslationService {
 
     constructor(apiKey: String) : this(DeepLClient(apiKey))
 

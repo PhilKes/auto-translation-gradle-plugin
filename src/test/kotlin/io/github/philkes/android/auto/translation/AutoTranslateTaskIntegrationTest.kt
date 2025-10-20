@@ -2,9 +2,10 @@ package io.github.philkes.android.auto.translation
 
 import com.deepl.api.DeepLClient
 import com.deepl.api.TextResult
-import io.github.philkes.android.auto.translation.provider.DeepLTranslationProvider
+import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
 import io.mockk.every
 import io.mockk.mockk
+import io.github.philkes.android.auto.translation.provider.TranslationProvider
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -51,14 +52,13 @@ class AutoTranslateTaskIntegrationTest {
             }
         }
 
-        val provider = DeepLTranslationProvider(mockClient)
+        val provider = DeepLTranslationService(mockClient)
 
         // Build a minimal Gradle task via ProjectBuilder
         val project = ProjectBuilder.builder().withProjectDir(projectDir).build()
         val task = project.tasks.create("autoTranslate", AutoTranslateTask::class.java)
         task.setTranslationProviderForTesting(provider)
-        task.provider.set("deepl")
-        task.detectLanguagesFromProject.set(false)
+        task.provider.set(TranslationProvider.DEEPL)
         task.targetLanguages.set(listOf("de", "fr"))
         task.resDir.set(project.layout.projectDirectory.dir("src/main/res"))
 

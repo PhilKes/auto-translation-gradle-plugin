@@ -21,6 +21,7 @@ dependencies {
     // uses commons-compress:1.12, higher version incompatible with some android projects
     implementation("org.apache.logging.log4j:log4j-core:2.24.3")
     implementation("com.deepl.api:deepl-java:1.10.3")
+    implementation("com.google.cloud:google-cloud-translate:2.77.0")
     testImplementation(kotlin("test"))
     testImplementation(gradleTestKit())
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
