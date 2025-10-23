@@ -1,19 +1,35 @@
 package io.github.philkes.android.auto.translation
 
+import io.github.philkes.android.auto.translation.config.AutoTranslationExtension
+import io.github.philkes.android.auto.translation.task.AutoTranslateTask
+import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.kotlin.dsl.register
-
-
 
 class AndroidAutoTranslationPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        project.tasks.register<AutoTranslateTask>(AUTO_TRANSLATE_TASK)
+        val extension =
+            project.extensions.create(AUTO_TRANSLATE_TASK, AutoTranslationExtension::class.java)
+
+        project.tasks.register(
+            AUTO_TRANSLATE_TASK,
+            AutoTranslateTask::class.java,
+            object : Action<AutoTranslateTask> {
+                override fun execute(task: AutoTranslateTask) {
+                    extension.resDirectory.orNull?.let { task.resDirectory.set(it) }
+                    extension.sourceLanguage.orNull?.let { task.sourceLanguage.set(it) }
+                    extension.targetLanguages.orNull?.let { task.targetLanguages.set(it) }
+                    extension.provider.orNull?.let { task.provider.set(it) }
+                    extension.languageCodeOverwrites.orNull?.let {
+                        task.languageCodeOverwrites.set(it)
+                    }
+                }
+            },
+        )
     }
 
-    companion object{
-         const val AUTO_TRANSLATE_TASK = "autoTranslate"
+    companion object {
+        const val AUTO_TRANSLATE_TASK = "androidAutoTranslate"
     }
 }
-

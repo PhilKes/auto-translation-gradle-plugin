@@ -1,31 +1,30 @@
 package io.github.philkes.android.auto.translation.provider
 
-import com.google.auth.ApiKeyCredentials
 import com.google.cloud.translate.Translate
-import com.google.cloud.translate.TranslateOptions
-import com.google.cloud.translate.Translate.TranslateOption
+import io.github.philkes.android.auto.translation.config.GoogleConfig
 
-class GoogleTranslationService(private val service: Translate) : TranslationService {
+class GoogleTranslationService(private val service: Translate, private val model: String?) :
+    TranslationService() {
 
-    constructor(apiKey: String) : this(
-        TranslateOptions.newBuilder().setCredentials(ApiKeyCredentials.create(apiKey)).build().service
-    )
+    constructor(
+        config: GoogleConfig
+    ) : this(config.options.get().build().service, config.model.orNull)
 
-    override fun translate(text: String, sourceLanguage: String, targetLanguage: String): String {
-        val result = service.translate(
-            text,
-            TranslateOption.sourceLanguage(sourceLanguage),
-            TranslateOption.targetLanguage(targetLanguage)
-        )
-        return result.translatedText
-    }
-
-    override fun translateBatch(texts: List<String>, sourceLanguage: String, targetLanguage: String): List<String> {
-        val result = service.translate(
-            texts,
-            TranslateOption.sourceLanguage(sourceLanguage),
-            TranslateOption.targetLanguage(targetLanguage)
-        )
+    override fun translateBatch(
+        texts: List<String>,
+        sourceLanguage: String,
+        targetLanguage: String,
+    ): List<String> {
+        var options =
+            arrayOf(
+                Translate.TranslateOption.sourceLanguage(sourceLanguage),
+                Translate.TranslateOption.targetLanguage(targetLanguage),
+                Translate.TranslateOption.format("html"),
+            )
+        if (!model.isNullOrBlank()) {
+            options += arrayOf(Translate.TranslateOption.model(model))
+        }
+        val result = service.translate(texts, *options)
         return result.map { it.translatedText }
     }
 }

@@ -1,34 +1,38 @@
 package io.github.philkes.android.auto.translation
 
-import com.deepl.api.DeepLClient
-import com.deepl.api.TextResult
-import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
-import io.mockk.every
-import io.mockk.mockk
-import io.github.philkes.android.auto.translation.provider.TranslationProvider
+import io.github.philkes.android.auto.translation.config.DeepLConfig
+import io.github.philkes.android.auto.translation.task.AutoTranslateTask
+import io.github.philkes.android.auto.translation.util.setIsUnitTest
+import java.io.File
+import kotlin.test.assertNotEquals
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.io.File
 
 class AutoTranslateTaskIntegrationTest {
 
     @Test
-    fun `task writes translated strings using mocked DeepL client`(@TempDir projectDir: File) {
+    fun `translation with plurals and missing strings xml`(@TempDir projectDir: File) {
         // Base strings.xml
         val baseValues = File(projectDir, "src/main/res/values").apply { mkdirs() }
+        val dollar = "\$"
         writeFile(
             File(baseValues, "strings.xml"),
             """
             <resources>
               <string name="hello">Hello</string>
-              <string name="bye">Bye</string>
+              <string name="bye">Bye %1${dollar}s</string>
+              <string name="items">Items title</string>
+              <plurals name="items">
+                <item quantity="one">item</item>
+                <item quantity="other">items</item>
+              </plurals>
               <string name="skip_me" translatable="false">DO NOT TRANSLATE</string>
             </resources>
-            """.trimIndent()
+            """
+                .trimIndent(),
         )
-
         // Existing German with one key to test merge behavior
         val deValues = File(projectDir, "src/main/res/values-de").apply { mkdirs() }
         writeFile(
@@ -37,30 +41,19 @@ class AutoTranslateTaskIntegrationTest {
             <resources>
               <string name="hello">Hallo</string>
             </resources>
-            """.trimIndent()
+            """
+                .trimIndent(),
         )
-
-        // Create a mocked DeepL client that appends [<target>] to each text
-        val mockClient = mockk<DeepLClient>()
-        every { mockClient.translateText(any<List<String>>(), "en", any<String>()) } answers {
-            val texts = firstArg<List<String>>()
-            val target = arg<String>(2)
-            texts.map { t ->
-                val result = mockk<TextResult>()
-                every { result.text } returns "$t [$target]"
-                result
-            }
-        }
-
-        val provider = DeepLTranslationService(mockClient)
-
+        setIsUnitTest(true)
         // Build a minimal Gradle task via ProjectBuilder
         val project = ProjectBuilder.builder().withProjectDir(projectDir).build()
         val task = project.tasks.create("autoTranslate", AutoTranslateTask::class.java)
-        task.setTranslationProviderForTesting(provider)
-        task.provider.set(TranslationProvider.DEEPL)
+        // Set a valid provider config (required by the task) with a dummy auth key
+        val config = project.objects.newInstance(DeepLConfig::class.java)
+        config.authKey.set("dummy-key")
+        task.provider.set(config)
         task.targetLanguages.set(listOf("de", "fr"))
-        task.resDir.set(project.layout.projectDirectory.dir("src/main/res"))
+        task.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
 
         // Execute the task
         task.translate()
@@ -69,17 +62,101 @@ class AutoTranslateTaskIntegrationTest {
         val deStrings = File(deValues, "strings.xml")
         assertTrue(deStrings.exists())
         val deContent = deStrings.readText()
-        assertTrue(deContent.contains("<string name=\"hello\">Hallo</string>"))
-        assertTrue(deContent.contains("<string name=\"bye\">Bye [de]</string>"))
+        val deByeIndex = deContent.indexOf("<string name=\"bye\">Bye %1\$s [DE]</string>")
+        assertNotEquals(-1, deByeIndex)
+        val deHelloIndex = deContent.indexOf("<string name=\"hello\">Hallo</string>")
+        assertNotEquals(-1, deHelloIndex)
+        val deItemsStringIndex =
+            deContent.indexOf("<string name=\"items\">Items title [DE]</string>")
+        assertNotEquals(-1, deItemsStringIndex)
+        // Plurals should be present and translated for DE
+        val dePluralsIndex = deContent.indexOf("<plurals name=\"items\">")
+        assertNotEquals(-1, dePluralsIndex)
+        val deItemOne = "<item quantity=\"one\">item [DE]</item>"
+        val deItemOther = "<item quantity=\"other\">items [DE]</item>"
+        val deItemOneIndex = deContent.indexOf(deItemOne)
+        val deItemOtherIndex = deContent.indexOf(deItemOther)
+        assertNotEquals(-1, deItemOneIndex)
+        assertNotEquals(-1, deItemOtherIndex)
+        assertTrue(deItemOneIndex < deItemOtherIndex, "DE plurals quantities have wrong order!")
+        // Check ordering: bye < hello < items (string) < items (plurals)
+        assertTrue(deByeIndex < deHelloIndex, "DE bye should come before hello!")
+        assertTrue(deHelloIndex < deItemsStringIndex, "DE items string should come after hello!")
+        assertTrue(
+            deItemsStringIndex < dePluralsIndex,
+            "DE items plurals should come after items string!",
+        )
         // Ensure translatable=false key not added
         assertTrue(!deContent.contains("skip_me"))
-
         // Verify FR file created with both keys translated by mock provider
         val frStrings = File(projectDir, "src/main/res/values-fr/strings.xml")
         assertTrue(frStrings.exists())
         val frContent = frStrings.readText()
-        assertTrue(frContent.contains("<string name=\"hello\">Hello [fr]</string>"))
-        assertTrue(frContent.contains("<string name=\"bye\">Bye [fr]</string>"))
+        println("[DEBUG_LOG] FR strings.xml content:\n$frContent")
+        val frByeIndex = frContent.indexOf("<string name=\"bye\">Bye %1\$s [FR]</string>")
+        assertNotEquals(-1, frByeIndex)
+        val frHelloIndex = frContent.indexOf("<string name=\"hello\">Hello [FR]</string>")
+        assertNotEquals(-1, frHelloIndex)
+        val frItemsStringIndex =
+            frContent.indexOf("<string name=\"items\">Items title [FR]</string>")
+        assertNotEquals(-1, frItemsStringIndex)
+        val frPluralsIndex = frContent.indexOf("<plurals name=\"items\">")
+        assertNotEquals(-1, frPluralsIndex)
+        // Global sort order by name: bye < hello < items (string) < items (plurals)
+        assertTrue(
+            frByeIndex < frHelloIndex,
+            "FR translations have the wrong order between simple strings!",
+        )
+        assertTrue(frHelloIndex < frItemsStringIndex, "FR items string should come after hello!")
+        assertTrue(
+            frItemsStringIndex < frPluralsIndex,
+            "FR plurals block should come after items string by name!",
+        )
+        // Check plural quantities and their order
+        val frItemOne = "<item quantity=\"one\">item [FR]</item>"
+        val frItemOther = "<item quantity=\"other\">items [FR]</item>"
+        val frItemOneIndex = frContent.indexOf(frItemOne)
+        val frItemOtherIndex = frContent.indexOf(frItemOther)
+        println("[DEBUG_LOG] frItemOneIndex=$frItemOneIndex, frItemOtherIndex=$frItemOtherIndex")
+        assertNotEquals(-1, frItemOneIndex)
+        assertNotEquals(-1, frItemOtherIndex)
+        assertTrue(frItemOneIndex < frItemOtherIndex, "FR plurals quantities have wrong order!")
+        // Ensure translatable=false key not added
+        assertTrue(!frContent.contains("skip_me"))
+    }
+
+    @Test
+    fun `use languageCodeOverwrites but keeps folder name`(@TempDir projectDir: File) {
+        // Base strings.xml
+        val baseValues = File(projectDir, "src/main/res/values").apply { mkdirs() }
+        writeFile(
+            File(baseValues, "strings.xml"),
+            """
+            <resources>
+              <string name="hello">Hello</string>
+            </resources>
+            """
+                .trimIndent(),
+        )
+        setIsUnitTest(true)
+        val project = ProjectBuilder.builder().withProjectDir(projectDir).build()
+        val task = project.tasks.create("autoTranslateOverwrite", AutoTranslateTask::class.java)
+        val config = project.objects.newInstance(DeepLConfig::class.java)
+        config.authKey.set("dummy-key")
+        task.provider.set(config)
+        // Target folder name is 'xyz' but API should use 'DE'
+        task.targetLanguages.set(setOf("xyz"))
+        task.languageCodeOverwrites.set(mapOf("xyz" to "DE"))
+        task.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
+
+        // Execute
+        task.translate()
+
+        // Verify output written to the original folder name
+        val xyzStrings = File(projectDir, "src/main/res/values-xyz/strings.xml")
+        assertTrue(xyzStrings.exists())
+        val content = xyzStrings.readText()
+        assertTrue(content.contains("<string name=\"hello\">Hello [DE]</string>"))
     }
 
     private fun writeFile(file: File, content: String) {

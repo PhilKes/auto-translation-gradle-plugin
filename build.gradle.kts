@@ -6,14 +6,14 @@ plugins {
     `java-gradle-plugin`
     `maven-publish`
     id("com.gradle.plugin-publish") version "1.3.0"
+    id("com.ncorti.ktfmt.gradle") version "0.24.0"
 }
 
 group = "io.github.philkes"
+
 version = "1.0.0"
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
     implementation(gradleApi())
@@ -29,19 +29,21 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.5")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
-tasks.test {
-    useJUnitPlatform()
-}
+
+tasks.test { useJUnitPlatform() }
+
 kotlin {
     jvmToolchain(8)
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_1_8)
-    }
+    compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
 }
 
+java { withSourcesJar() }
+
+ktfmt { kotlinLangStyle() }
+
 gradlePlugin {
-    website = "https://github.com/PhilKes/android-translations-converter-plugin"
-    vcsUrl = "https://github.com/PhilKes/android-translations-converter-plugin"
+    website = "https://github.com/PhilKes/android-auto-translation-plugin"
+    vcsUrl = "https://github.com/PhilKes/android-auto-translation-plugin"
     description = "Automatically translate your strings.xml via external APIs"
     plugins {
         create("autoTranslateStrings") {
@@ -49,7 +51,8 @@ gradlePlugin {
             displayName = "Android Auto Translations"
             description = "Automatically translate your strings.xml via external APIs"
             tags = listOf("android", "translation", "ai")
-            implementationClass = "io.github.philkes.android.auto.translation.AndroidAutoTranslationPlugin"
+            implementationClass =
+                "io.github.philkes.android.auto.translation.AndroidAutoTranslationPlugin"
         }
     }
 }
