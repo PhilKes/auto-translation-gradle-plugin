@@ -17,10 +17,11 @@ class StringsXmlTranslator(private val logger: Logger) {
         service: TranslationService,
         srcLang: Locale,
         targetLanguages: Set<String>,
+        excludeLanguages: Set<String> = emptySet(),
     ) {
         val valuesParentFolder = resDirectory
         val xml = StringsXmlHelper(logger)
-        val targets = resolveTargets(valuesParentFolder, targetLanguages)
+        val targets = resolveTargets(valuesParentFolder, targetLanguages, true, excludeLanguages)
         if (targets.isEmpty()) {
             logger.lifecycle("No targetLanguages resolved. Nothing to translate.")
             return
@@ -31,13 +32,13 @@ class StringsXmlTranslator(private val logger: Logger) {
         val sourceStringsFile = File(sourceDir, "strings.xml")
         if (!sourceStringsFile.exists()) {
             throw GradleException(
-                "Source file '${sourceStringsFile.absolutePath}' does not exist. Ensure 'resDirectory' is configured correctly (currently: '${sourceDir.absolutePath}').",
+                "Source file '${sourceStringsFile.absolutePath}' does not exist. Ensure 'resDirectory' is configured correctly (currently: '${sourceDir.absolutePath}')."
             )
         }
         val sourceStrings = xml.parse(sourceStringsFile)
         if (sourceStrings.isEmpty()) {
             logger.lifecycle(
-                "No translatable <string> entries found in base strings.xml. Nothing to do.",
+                "No translatable <string> entries found in base strings.xml. Nothing to do."
             )
             return
         }
@@ -47,7 +48,7 @@ class StringsXmlTranslator(private val logger: Logger) {
             val missingKeys = sourceStrings.keys.filter { it !in existing.keys }
             if (missingKeys.isEmpty()) {
                 logger.lifecycle(
-                    "[$locale] All strings already present (${existing.size}). Skipping.",
+                    "[$locale] All strings already present (${existing.size}). Skipping."
                 )
                 return@forEach
             }
@@ -78,7 +79,7 @@ class StringsXmlTranslator(private val logger: Logger) {
             if (!targetDir.exists()) targetDir.mkdirs()
             xml.write(targetStringsFile, merged)
             logger.lifecycle(
-                "[$locale] Wrote ${additions.size} new translations. Total strings now: ${merged.size}.",
+                "[$locale] Wrote ${additions.size} new translations. Total strings now: ${merged.size}."
             )
         }
     }
@@ -87,6 +88,7 @@ class StringsXmlTranslator(private val logger: Logger) {
         valuesParentFolder: File,
         languages: Set<String>,
         log: Boolean = true,
+        excludeLanguages: Set<String> = emptySet(),
     ): Map<Locale, File> {
         fun localesFrom(codes: Collection<String>): List<Locale> =
             codes.sorted().mapNotNull { code ->
@@ -94,7 +96,7 @@ class StringsXmlTranslator(private val logger: Logger) {
                 if (locale == null) {
                     if (log)
                         logger.warn(
-                            "[$code] found non ISO Code targetLanguage: '$code', will skip translation for it",
+                            "[$code] found non ISO Code targetLanguage: '$code', will skip translation for it"
                         )
                     null
                 } else {
@@ -107,12 +109,16 @@ class StringsXmlTranslator(private val logger: Logger) {
             }
         }
         if (log) logger.lifecycle("Auto. detecting targetLanguages...")
-        val codes =
+        val rawCodes =
             valuesParentFolder.listFiles()?.mapNotNull { dir ->
                 if (dir.isDirectory && dir.name.startsWith("values-"))
                     dir.name.removePrefix("values-")
                 else null
             } ?: emptyList()
+        val codes = rawCodes.filterNot { it in excludeLanguages }
+        if (log && excludeLanguages.isNotEmpty()) {
+            logger.lifecycle("Excluding languages from autodetect: ${excludeLanguages}")
+        }
         return localesFrom(codes).associateWith { locale ->
             File(valuesParentFolder, "values-${locale.androidCode}/strings.xml")
         }

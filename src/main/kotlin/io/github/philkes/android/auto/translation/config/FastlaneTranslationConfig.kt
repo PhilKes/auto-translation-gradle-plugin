@@ -1,28 +1,25 @@
 package io.github.philkes.android.auto.translation.config
 
 import io.github.philkes.android.auto.translation.task.AutoTranslateTask
-import org.gradle.api.Project
 import javax.inject.Inject
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 
 /** Configuration for translating Fastlane metadata files. */
 open class FastlaneTranslationConfig @Inject constructor(objects: ObjectFactory) {
 
     /**
-     *  Whether to translate Fastlane metadata text files.
+     * Whether to translate Fastlane metadata text files.
      *
-     *  Defaults to `false`.
+     * Defaults to `false`.
      */
-    @get:Input
-    @get:Optional
-    val enabled: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:Input @get:Optional val enabled: Property<Boolean> = objects.property(Boolean::class.java)
 
     /**
      * Path to Fastlane metadata root directory (contains locale subfolders like `en-US`).
@@ -50,16 +47,17 @@ open class FastlaneTranslationConfig @Inject constructor(objects: ObjectFactory)
     @get:Input
     @get:Optional
     val targetLanguages: SetProperty<String> = objects.setProperty(String::class.java)
-
 }
 
 internal fun FastlaneTranslationConfig.setDefaultValues(project: Project, task: AutoTranslateTask) {
     enabled.convention(false)
-    metadataDirectory.convention(project.provider {
-        if(enabled.get()) {
-            project.layout.projectDirectory.dir("fastlane/metadata/android")
-        } else null
-    })
+    metadataDirectory.convention(
+        project.provider {
+            if (enabled.get()) {
+                project.layout.projectDirectory.dir("fastlane/metadata/android")
+            } else null
+        }
+    )
     sourceLanguage.convention(task.sourceLanguage)
     targetLanguages.convention(task.targetLanguages)
 }

@@ -8,7 +8,6 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 
 /** Configuration for translating Android strings.xml resources. */
@@ -21,7 +20,7 @@ open class StringsXmlTranslationConfig @Inject constructor(objects: ObjectFactor
      */
     @get:Input
     @get:Optional
-    val enabled: Property<Boolean> = objects.property(Boolean::class.java)
+    val enabled: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     /**
      * Path to the folder containing the `values/strings.xml` and `values-{targetLanguage}` folders.
@@ -31,14 +30,18 @@ open class StringsXmlTranslationConfig @Inject constructor(objects: ObjectFactor
     @get:InputDirectory
     @get:Optional
     val resDirectory: DirectoryProperty = objects.directoryProperty()
-
 }
 
-internal fun StringsXmlTranslationConfig.setDefaultValues(project: Project, task: AutoTranslateTask) {
+internal fun StringsXmlTranslationConfig.setDefaultValues(
+    project: Project,
+    task: AutoTranslateTask,
+) {
     enabled.convention(true)
-    resDirectory.convention(project.provider {
-        if(enabled.get()) {
-            project.layout.projectDirectory.dir("src/main/res")
-        } else null
-    })
+    resDirectory.convention(
+        project.provider {
+            if (enabled.get()) {
+                project.layout.projectDirectory.dir("src/main/res")
+            } else null
+        }
+    )
 }

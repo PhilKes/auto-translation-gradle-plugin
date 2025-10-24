@@ -16,13 +16,14 @@ class FastlaneTranslator(private val logger: Logger) {
      * - service: translation service to use
      * - srcLang: source locale
      * - targetLanguages: explicit target folder codes (when empty, autodetect from directories)
-     * - overwrites: optional mapping from folder code -> API language code
+     * - excludeLanguages: optional list of folder codes to exclude when autodetecting
      */
     fun translate(
         metadataRoot: File,
         service: TranslationService,
         srcLang: Locale,
         targetLanguages: Set<String>,
+        excludeLanguages: Set<String> = emptySet(),
     ) {
         if (!metadataRoot.exists()) {
             throw GradleException(
@@ -53,7 +54,7 @@ class FastlaneTranslator(private val logger: Logger) {
         // Determine targets: either explicit or from metadata folders
         val targetCodes: List<String> =
             if (targetLanguages.isNotEmpty()) targetLanguages.sorted()
-            else allLocaleDirs.map { it.name }.sorted()
+            else allLocaleDirs.map { it.name }.filterNot { it in excludeLanguages }.sorted()
 
         val targets: List<Pair<Locale, String>> =
             targetCodes

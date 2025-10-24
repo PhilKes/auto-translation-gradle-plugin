@@ -19,6 +19,7 @@ class AndroidAutoTranslationPlugin : Plugin<Project> {
                 override fun execute(task: AutoTranslateTask) {
                     extension.sourceLanguage.orNull?.let { task.sourceLanguage.set(it) }
                     extension.targetLanguages.orNull?.let { task.targetLanguages.set(it) }
+                    extension.excludeLanguages.orNull?.let { task.excludeLanguages.set(it) }
                     extension.provider.orNull?.let { task.provider.set(it) }
                     extension.translateStringsXml.orNull?.let { task.translateStringsXml.set(it) }
                     extension.translateFastlane.orNull?.let { task.translateFastlane.set(it) }

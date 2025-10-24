@@ -19,6 +19,12 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
      */
     val targetLanguages = objects.listProperty<String>().convention(emptyList())
 
+    /**
+     * Languages to exclude when targetLanguages is not set. Useful to skip some autodetected
+     * languages.
+     */
+    val excludeLanguages = objects.listProperty<String>().convention(emptyList())
+
     /** Provide Strings.xml translation configuration. */
     val translateStringsXml: Property<StringsXmlTranslationConfig> =
         objects.property(StringsXmlTranslationConfig::class.java)
@@ -52,7 +58,9 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
     }
 
     /** Create a [StringsXmlTranslationConfig] to configure strings.xml translation. */
-    fun translateStringsXml(action: StringsXmlTranslationConfig.() -> Unit): StringsXmlTranslationConfig {
+    fun translateStringsXml(
+        action: StringsXmlTranslationConfig.() -> Unit
+    ): StringsXmlTranslationConfig {
         val cfg = objects.newInstance(StringsXmlTranslationConfig::class.java)
         cfg.action()
         this.translateStringsXml.set(cfg)

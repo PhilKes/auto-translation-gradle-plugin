@@ -54,9 +54,11 @@ class AutoTranslateTaskIntegrationTest {
         task.provider.set(config)
         task.targetLanguages.set(listOf("de", "fr"))
         // Configure strings.xml wrapper
-        val stringsCfg = project.objects.newInstance(
-            io.github.philkes.android.auto.translation.config.StringsXmlTranslationConfig::class.java
-        )
+        val stringsCfg =
+            project.objects.newInstance(
+                io.github.philkes.android.auto.translation.config.StringsXmlTranslationConfig::class
+                    .java
+            )
         stringsCfg.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
         task.translateStringsXml.set(stringsCfg)
 
