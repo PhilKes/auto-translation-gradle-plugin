@@ -42,17 +42,18 @@ java { withSourcesJar() }
 ktfmt { kotlinLangStyle() }
 
 gradlePlugin {
-    website = "https://github.com/PhilKes/android-auto-translation-plugin"
-    vcsUrl = "https://github.com/PhilKes/android-auto-translation-plugin"
+    website = "https://github.com/PhilKes/auto-translation-gradle-plugin"
+    vcsUrl = "https://github.com/PhilKes/auto-translation-gradle-plugin"
     description = "Automatically translate your strings.xml via external APIs"
     plugins {
         create("autoTranslateStrings") {
-            id = "io.github.philkes.android-auto-translation"
-            displayName = "Android Auto Translations"
-            description = "Automatically translate your strings.xml via external APIs"
-            tags = listOf("android", "translation", "ai")
-            implementationClass =
-                "io.github.philkes.android.auto.translation.AndroidAutoTranslationPlugin"
+            id = "io.github.philkes.auto-translation"
+            displayName = "Auto Translations"
+            description =
+                "Automatically translate your Android project via external Translation providers"
+            tags =
+                listOf("android", "translation", "ai", "google", "azure", "deepl", "libretranslate")
+            implementationClass = "io.github.philkes.auto.translation.plugin.AutoTranslationPlugin"
         }
     }
 }

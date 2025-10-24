@@ -1,11 +1,11 @@
 @echo off
-echo Running Gradle task: androidAutoTranslate
+echo Running Gradle task: autoTranslate
 
-gradlew androidAutoTranslate
+gradlew autoTranslate
 
 if %errorlevel% neq 0 (
-    echo Gradle task 'androidAutoTranslate' failed. Please fix the issues.
+    echo Gradle task 'autoTranslate' failed. Please fix the issues.
     exit /b 1
 )
 
-echo Gradle task 'androidAutoTranslate' completed successfully.
+echo Gradle task 'autoTranslate' completed successfully.

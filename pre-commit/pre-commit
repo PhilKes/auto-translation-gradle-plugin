@@ -1,11 +1,11 @@
 #!/bin/sh
 
-echo "Running Gradle task: androidAutoTranslate"
-./gradlew androidAutoTranslate
+echo "Running Gradle task: autoTranslate"
+./gradlew autoTranslate
 
 if [ $? -ne 0 ]; then
-    echo "Gradle task 'androidAutoTranslate' failed. Please fix the issues."
+    echo "Gradle task 'autoTranslate' failed. Please fix the issues."
     exit 1
 fi
 
-echo "Gradle task 'androidAutoTranslate' completed successfully."
+echo "Gradle task 'autoTranslate' completed successfully."

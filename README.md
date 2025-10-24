@@ -1,5 +1,5 @@
-# Android Auto Translation Plugin
-<a href="https://plugins.gradle.org/plugin/io.github.philkes.android-auto-translation"><img alt="Gradle Plugin Portal Version" src="https://img.shields.io/gradle-plugin-portal/v/io.github.philkes.android-auto-translation"></a>
+# Auto Translation Plugin
+<a href="https://plugins.gradle.org/plugin/io.github.philkes.auto-translation"><img alt="Gradle Plugin Portal Version" src="https://img.shields.io/gradle-plugin-portal/v/io.github.philkes.auto-translation"></a>
 
 
 Plug'n'Play Gradle plugin for Android projects to automatically translate your `strings.xml` and Fastlane metadata into any language using external services like DeepL, Google, Azure, or LibreTranslate.
@@ -24,11 +24,11 @@ Plug'n'Play Gradle plugin for Android projects to automatically translate your `
 In `build.gradle.kts`:
 ```kotlin
 plugins {
-    id("io.github.philkes.android-auto-translation") version "1.0.0"
+    id("io.github.philkes.auto-translation") version "1.0.0"
 }
 
 // Minimal example: translate strings.xml for all present language folders using DeepL
-androidAutoTranslate {
+autoTranslate {
     provider = deepL {
         authKey = "YOUR_AUTH_KEY"
     }
@@ -37,14 +37,14 @@ androidAutoTranslate {
 
 Run:
 ```shell
-./gradlew androidAutoTranslate
+./gradlew autoTranslate
 ```
 
 ## Configuration
 
 Shown values are defaults or placeholders.
 ```kotlin
-androidAutoTranslate {
+autoTranslate {
     // Language of the base strings (values/strings.xml)
     // Default: "en-US"
     sourceLanguage = "en-US"
@@ -68,7 +68,7 @@ androidAutoTranslate {
         enabled = false // default
         // Default: project.layout.projectDirectory.dir("fastlane/metadata/android")
         metadataDirectory = project.layout.projectDirectory.dir("fastlane/metadata/android") // default
-        // Defaults to androidAutoTranslate.sourceLanguage
+        // Defaults to autoTranslate.sourceLanguage
         sourceLanguage = "en-US"
         // Explicit target languages for Fastlane (otherwise autodetected from folder names under metadataDirectory)
         targetLanguages = setOf("de-DE")
@@ -140,14 +140,14 @@ For every `<item>` quantity in the sourceLanguage's `strings.xml`, a translation
 
 ### Run on build (optional)
 
-If you want the `androidAutoTranslate` to run automatically on every build, in `build.gradle.kts`:
+If you want the `autoTranslate` to run automatically on every build, in `build.gradle.kts`:
 ```kotlin
-preBuild.dependsOn("androidAutoTranslate")
+preBuild.dependsOn("autoTranslate")
 ```
 
 ### Pre-commit hook (optional)
 
-If you want `androidAutoTranslate` to run automatically before any git commit:
+If you want `autoTranslate` to run automatically before any git commit:
 1. Copy the [pre-commit folder](./pre-commit) to the root of your project
 2. In `build.gradle`:
     ```groovy
