@@ -19,14 +19,12 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
      */
     val targetLanguages = objects.listProperty<String>().convention(emptyList())
 
-    /**
-     * Path to the folder containing the `values/strings.xml` and `values-{iso-code}` folders.
-     * Defaults to `${projectDir}/src/main/res`
-     */
-    val resDirectory = objects.directoryProperty()
+    /** Provide Strings.xml translation configuration. */
+    val translateStringsXml: Property<StringsXmlTranslationConfig> =
+        objects.property(StringsXmlTranslationConfig::class.java)
 
     /** Provide Fastlane translation configuration. */
-    val fastlane: Property<FastlaneTranslationConfig> =
+    val translateFastlane: Property<FastlaneTranslationConfig> =
         objects.property(FastlaneTranslationConfig::class.java)
 
     /** Specify which translation provider to use and set it's options. */
@@ -53,11 +51,19 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
         return cfg
     }
 
+    /** Create a [StringsXmlTranslationConfig] to configure strings.xml translation. */
+    fun translateStringsXml(action: StringsXmlTranslationConfig.() -> Unit): StringsXmlTranslationConfig {
+        val cfg = objects.newInstance(StringsXmlTranslationConfig::class.java)
+        cfg.action()
+        this.translateStringsXml.set(cfg)
+        return cfg
+    }
+
     /** Create a [FastlaneTranslationConfig] to configure Fastlane metadata translation. */
-    fun fastlane(action: FastlaneTranslationConfig.() -> Unit): FastlaneTranslationConfig {
+    fun translateFastlane(action: FastlaneTranslationConfig.() -> Unit): FastlaneTranslationConfig {
         val cfg = objects.newInstance(FastlaneTranslationConfig::class.java)
         cfg.action()
-        this.fastlane.set(cfg)
+        this.translateFastlane.set(cfg)
         return cfg
     }
 }

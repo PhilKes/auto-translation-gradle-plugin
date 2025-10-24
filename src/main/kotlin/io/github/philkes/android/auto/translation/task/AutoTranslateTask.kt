@@ -5,28 +5,25 @@ import io.github.philkes.android.auto.translation.config.DeepLConfig
 import io.github.philkes.android.auto.translation.config.FastlaneTranslationConfig
 import io.github.philkes.android.auto.translation.config.GoogleConfig
 import io.github.philkes.android.auto.translation.config.ProviderConfig
+import io.github.philkes.android.auto.translation.config.StringsXmlTranslationConfig
+import io.github.philkes.android.auto.translation.config.setDefaultValues
 import io.github.philkes.android.auto.translation.provider.AzureTranslationService
 import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
 import io.github.philkes.android.auto.translation.provider.GoogleTranslationService
 import io.github.philkes.android.auto.translation.provider.TestTranslationService
 import io.github.philkes.android.auto.translation.provider.TranslationService
-import io.github.philkes.android.auto.translation.util.StringsXmlHelper
-import io.github.philkes.android.auto.translation.util.androidCode
 import io.github.philkes.android.auto.translation.util.isUnitTest
 import io.github.philkes.android.auto.translation.util.readableClassName
 import io.github.philkes.android.auto.translation.util.toIsoLocale
 import java.io.File
-import java.util.Locale
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFiles
@@ -36,27 +33,33 @@ import org.gradle.api.tasks.TaskAction
 abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
 
     /**
-     * Language ISO-Code of the source strings (`src/main/res/values/strings.xml`). Defaults to:
-     * `en-US` (English USA)
+     * Language ISO-Code of the source strings (`src/main/res/values/strings.xml`).
+     *
+     * Defaults to: `en-US` (English USA)
      */
     @get:Input @get:Optional abstract val sourceLanguage: Property<String>
 
     /**
-     * Language ISO-Codes (from `values-{iso-code}` folder names) to translate. By defaults detects
-     * all available langauges from the `src/main/res` folder.
+     * Language ISO-Codes (e.g.: `en-US`) to translate.
+     *
+     * Note that Android uses a different formatting for the country/region value in their `values` folder naming:
+     * `values-{languageCode}-r{countryCode}`, whereas the ISO-Code uses: `{languageCode-countrCode}`.
+     *
+     * By default detects all available targetLanguages from the [StringsXmlTranslationConfig.resDirectory] `values` folders.
      */
     @get:Input @get:Optional abstract val targetLanguages: SetProperty<String>
 
     /**
-     * Path to the folder containing the `values/strings.xml` and `values-{iso-code}` folders.
-     * Defaults to `${projectDir}/src/main/res`
+     * strings.xml translation configuration wrapper.
+     *
+     * By default strings.xml translation is enabled
      */
-    @get:InputDirectory @get:Optional abstract val resDirectory: DirectoryProperty
+    @get:Nested @get:Optional abstract val translateStringsXml: Property<StringsXmlTranslationConfig>
 
     // TOOD: Add ignores for values folders and fastlane metadata files
 
     /** Fastlane translation configuration wrapper. */
-    @get:Nested @get:Optional abstract val fastlane: Property<FastlaneTranslationConfig>
+    @get:Nested @get:Optional abstract val translateFastlane: Property<FastlaneTranslationConfig>
 
     /** Specify which translation provider to use and set it's options. */
     @get:Nested abstract val provider: Property<ProviderConfig>
@@ -67,21 +70,36 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
         description = "Auto-translate Android strings.xml files"
         group = "translations"
         // Defaults
-        resDirectory.convention(project.layout.projectDirectory.dir("src/main/res"))
         sourceLanguage.convention("en-US")
-        targetLanguages.convention(emptyList())
+        targetLanguages.convention(emptySet<String>())
+        translateStringsXml.convention(
+            project.provider {
+                val cfg = project.objects.newInstance(StringsXmlTranslationConfig::class.java)
+                cfg.setDefaultValues(project, this)
+                cfg
+            }
+        )
+        translateFastlane.convention(
+            project.provider {
+                val cfg = project.objects.newInstance(FastlaneTranslationConfig::class.java)
+                cfg.setDefaultValues(project, this)
+                cfg
+            }
+        )
         changedStringsXmls.set(
             project.provider {
-                val targets =
-                    resolveTargets(resDirectory.get().asFile, targetLanguages.get(), false)
-                targets.map { it.value }
+                val cfg = translateStringsXml.get()
+                cfg.setDefaultValues(project, this)
+                val resDir = cfg.resDirectory.get().asFile
+                StringsXmlTranslator(logger)
+                    .resolveTargets(resDir, targetLanguages.getOrElse(emptySet()), false)
+                    .map { it.value }
             }
         )
     }
 
     @TaskAction
     fun translate() {
-        val valuesParentFolder = resDirectory.get().asFile
         val provider = provider.get()
         if (!provider.isValid()) {
             throw GradleException(
@@ -92,92 +110,53 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
         if (srcLang == null) {
             throw GradleException("Found non ISO Code sourceLanguage: '${sourceLanguage.get()}'")
         }
-        val xml = StringsXmlHelper(logger)
-        val targets = resolveTargets(valuesParentFolder, targetLanguages.get())
-        if (targets.isEmpty()) {
-            logger.lifecycle("No targetLanguages resolved. Nothing to translate.")
-            return
-        } else {
-            logger.lifecycle("Translating for targetLanguages: ${targets.map { it.key }}")
-        }
         val translationService: TranslationService = createTranslationService(provider)
-        logger.log(
-            LogLevel.LIFECYCLE,
-            "AutoTranslateTask: provider=${provider.readableClassName}, resDirectory=${valuesParentFolder.absolutePath}, sourceLanguage=$srcLang, targetLanguages=${targets.map { it.key }}",
-        )
-        val sourceDir = File(valuesParentFolder, "values")
-        val sourceStringsFile = File(sourceDir, "strings.xml")
-        if (!sourceStringsFile.exists()) {
-            throw GradleException(
-                "Source file '${sourceStringsFile.absolutePath}' does not exist. Ensure 'resDirectory' is configured correctly (currently: '${sourceDir.absolutePath}')."
-            )
-        }
-        val sourceStrings = xml.parse(sourceStringsFile)
-        if (sourceStrings.isEmpty()) {
-            logger.lifecycle(
-                "No translatable <string> entries found in base strings.xml. Nothing to do."
-            )
-            return
-        }
-        targets.forEach { (locale, targetStringsFile) ->
-            val existing =
-                if (targetStringsFile.exists()) xml.parse(targetStringsFile) else emptyMap()
-            val missingKeys = sourceStrings.keys.filter { it !in existing.keys }
-            if (missingKeys.isEmpty()) {
-                logger.lifecycle(
-                    "[$locale] All strings already present (${existing.size}). Skipping."
+
+        // Strings.xml translation via wrapper config (enabled by default)
+        translateStringsXml.orNull?.let { cfg ->
+            if (cfg.enabled.get()) {
+                val resDir = cfg.resDirectory.get().asFile
+                if(!resDir.exists()){
+                    throw GradleException("Provided translateStringsXml 'resDirectory' does not exist: $resDir")
+                }
+                logger.log(
+                    LogLevel.LIFECYCLE,
+                    "StringsXmlTranslation: provider=${provider.readableClassName}, resDirectory=${resDir.absolutePath}, sourceLanguage=$srcLang, targetLanguages=${targetLanguages.getOrElse(emptySet())}",
                 )
-                return@forEach
+                StringsXmlTranslator(logger)
+                    .translate(
+                        resDirectory = resDir,
+                        service = translationService,
+                        srcLang = srcLang,
+                        targetLanguages = targetLanguages.get(),
+                    )
             }
-
-            val textsToTranslate = missingKeys.map { key -> sourceStrings[key] ?: "" }
-
-            // Protect Android printf-style placeholders (e.g., %1$s) from being altered by
-            // providers
-            val maskedTexts = textsToTranslate.map { xml.maskPlaceholders(it) }
-
-            val translatedMasked =
-                try {
-                    translationService.translateBatch(maskedTexts, srcLang, locale)
-                } catch (e: Exception) {
-                    logger.error("[$locale] Translation failed: ${e.message}", e)
-                    return@forEach
-                }
-
-            // Restore placeholders in the translated text
-            val translated = translatedMasked.map { xml.unmaskPlaceholders(it) }
-
-            val additions = missingKeys.zip(translated).toMap()
-            val merged =
-                LinkedHashMap<String, String>().apply {
-                    putAll(existing)
-                    additions.forEach { (k, v) -> this[k] = v }
-                }
-            val targetDir = targetStringsFile.parentFile
-            if (!targetDir.exists()) targetDir.mkdirs()
-            xml.write(targetStringsFile, merged)
-            logger.lifecycle(
-                "[$locale] Wrote ${additions.size} new translations. Total strings now: ${merged.size}."
-            )
         }
 
         // Fastlane metadata translation (optional via wrapper config)
-        fastlane.orNull?.let { fastlaneConfig ->
-            fastlaneConfig.setDefaultValues(project, this)
+        translateFastlane.orNull?.let { fastlaneConfig ->
             if (fastlaneConfig.enabled.get()) {
                 val metaDir = fastlaneConfig.metadataDirectory.get().asFile
-                val fastlaneSrcLang = sourceLanguage.get().toIsoLocale()
+                if(!metaDir.exists()){
+                    throw GradleException("Provided translateFastlane 'metadataDirectory' does not exist: $metaDir")
+                }
+                val fastlaneSrcLang = fastlaneConfig.sourceLanguage.get().toIsoLocale()
                 if (fastlaneSrcLang == null) {
                     throw GradleException(
-                        "Non ISO Code 'fastlaneSourceLanguage' provided: '${fastlaneConfig.sourceLanguage.orNull}'"
+                        "Non ISO Code fastlaneConfig 'sourceLanguage' provided: '${fastlaneConfig.sourceLanguage.orNull}'"
                     )
                 }
+                val fastlaneTargetLanguages = fastlaneConfig.targetLanguages.get()
+                logger.log(
+                    LogLevel.LIFECYCLE,
+                    "StringsXmlTranslation: provider=${provider.readableClassName}, metadataDirectory=${metaDir}, sourceLanguage=$srcLang, targetLanguages=$fastlaneTargetLanguages",
+                )
                 FastlaneTranslator(logger)
                     .translate(
                         metadataRoot = metaDir,
                         service = translationService,
                         srcLang = fastlaneSrcLang,
-                        targetLanguages = targetLanguages.getOrElse(emptySet()),
+                        targetLanguages = fastlaneTargetLanguages,
                     )
             }
         }
@@ -199,42 +178,5 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                 e,
             )
         }
-    }
-
-    fun resolveTargets(
-        valuesParentFolder: File,
-        languages: Set<String>,
-        log: Boolean = true,
-    ): Map<Locale, File> {
-        fun pairsFrom(codes: Collection<String>): List<Locale> =
-            codes.sorted().mapNotNull { code ->
-                val locale = code.toIsoLocale()
-                if (locale == null) {
-                    if (log)
-                        logger.warn(
-                            "[$code] found non ISO Code targetLanguage: '$code', will skip translation for it"
-                        )
-                    null
-                } else {
-                    locale
-                }
-            }
-        if (languages.isNotEmpty()) {
-            return pairsFrom(languages).associateWith { locale ->
-                File(valuesParentFolder, "values-${locale.androidCode}/strings.xml")
-            }
-        }
-        if (log) logger.lifecycle("Auto. detecting targetLanguages...")
-        return if (valuesParentFolder.exists()) {
-            val codes =
-                valuesParentFolder.listFiles()?.mapNotNull { dir ->
-                    if (dir.isDirectory && dir.name.startsWith("values-"))
-                        dir.name.removePrefix("values-")
-                    else null
-                } ?: emptyList()
-            pairsFrom(codes).associateWith { locale ->
-                File(valuesParentFolder, "values-${locale.androidCode}/strings.xml")
-            }
-        } else mapOf()
     }
 }

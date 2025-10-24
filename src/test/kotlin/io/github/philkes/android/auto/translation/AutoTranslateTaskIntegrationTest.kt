@@ -53,7 +53,12 @@ class AutoTranslateTaskIntegrationTest {
         config.authKey.set("dummy-key")
         task.provider.set(config)
         task.targetLanguages.set(listOf("de", "fr"))
-        task.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
+        // Configure strings.xml wrapper
+        val stringsCfg = project.objects.newInstance(
+            io.github.philkes.android.auto.translation.config.StringsXmlTranslationConfig::class.java
+        )
+        stringsCfg.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
+        task.translateStringsXml.set(stringsCfg)
 
         // Execute the task
         task.translate()

@@ -17,13 +17,11 @@ class AndroidAutoTranslationPlugin : Plugin<Project> {
             AutoTranslateTask::class.java,
             object : Action<AutoTranslateTask> {
                 override fun execute(task: AutoTranslateTask) {
-                    extension.resDirectory.orNull?.let { task.resDirectory.set(it) }
                     extension.sourceLanguage.orNull?.let { task.sourceLanguage.set(it) }
                     extension.targetLanguages.orNull?.let { task.targetLanguages.set(it) }
                     extension.provider.orNull?.let { task.provider.set(it) }
-                    extension.fastlane.orNull?.let {
-                        task.fastlane.set(it)
-                    }
+                    extension.translateStringsXml.orNull?.let { task.translateStringsXml.set(it) }
+                    extension.translateFastlane.orNull?.let { task.translateFastlane.set(it) }
                 }
             },
         )
