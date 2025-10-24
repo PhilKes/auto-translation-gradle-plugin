@@ -2,22 +2,23 @@
 <a href="https://plugins.gradle.org/plugin/io.github.philkes.auto-translation"><img alt="Gradle Plugin Portal Version" src="https://img.shields.io/gradle-plugin-portal/v/io.github.philkes.auto-translation"></a>
 
 
-Plug'n'Play Gradle plugin for Android projects to automatically translate your `strings.xml` and Fastlane metadata into any language using external services like DeepL, Google, Azure, or LibreTranslate.
+Gradle plugin to automatically translate your Android project (`strings.xml` + Fastlane metadata) into any language using external services like [DeepL](https://www.deepl.com/en/pro-api), [Google Cloud Translation](https://cloud.google.com/translate), [Azure AI Translator](https://azure.microsoft.com/en-us/products/ai-services/ai-translator), [LibreTranslate](https://libretranslate.com/), or [OpenAI](https://platform.openai.com/).
 
 ## Features
 
-- Detect missing translations for any existing or new language
-- Automatically translate missing entries via a configured Translation Provider
-- Supports [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
-- Correctly escapes/unescapes [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) and HTML tags in `strings.xml`
+- Detect missing translations for any existing or new language your project's `strings.xml` files
+- Automatically translate missing entries via configured Translation Provider
+- Support for [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
+- Correctly preserve [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) and HTML tags in `strings.xml`
 - Auto-sorts translations by their `name` attribute
-- Translate Fastlane metadata text files (.txt) recursively; each file is sent as a single string
+- Translate Fastlane metadata text files
 
-### Supported APIs
+### Supported Translation Providers
 - [Google Cloud Translation](https://cloud.google.com/translate) (Client: [google-cloud-java/java-translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate))
 - [Azure AI Translator](https://azure.microsoft.com/en-us/products/ai-services/ai-translator) (Client: [azure-ai-translation-text](https://github.com/Azure/azure-sdk-for-java/tree/azure-ai-translation-text_1.1.6/sdk/translation/azure-ai-translation-text/))
 - [DeepL](https://www.deepl.com/en/pro-api) (Client: [DeepLcom/deepl-java](https://github.com/DeepLcom/deepl-java))
 - [LibreTranslate](https://libretranslate.com/) (Self-hosted or public instances)
+- [OpenAI](https://platform.openai.com/) (Via Completions API, see [OpenAI](#openai) for more details, Client: [openai-java](https://github.com/openai/openai-java))
 
 ## Setup
 
@@ -31,6 +32,8 @@ plugins {
 autoTranslate {
     provider = deepL {
         authKey = "YOUR_AUTH_KEY"
+        // Alternatively get it via an environment variable:
+        // authKey = System.getenv("DEEPL_API_KEY")
     }
 }
 ```
@@ -45,7 +48,7 @@ Run:
 Shown values are defaults or placeholders.
 ```kotlin
 autoTranslate {
-    // Language of the base strings (values/strings.xml)
+    // Language of the source strings (values/strings.xml)
     // Default: "en-US"
     sourceLanguage = "en-US"
 
@@ -66,14 +69,17 @@ autoTranslate {
     // Configure Fastlane metadata translation
     translateFastlane {
         enabled = false // default
-        // Default: project.layout.projectDirectory.dir("fastlane/metadata/android")
+        // Path to fastlane metadata root folder, containing `{targetLanguage` folders
+        // with description, changelogs txt files
         metadataDirectory = project.layout.projectDirectory.dir("fastlane/metadata/android") // default
+        // Language of the source fastlane documentation
         // Defaults to autoTranslate.sourceLanguage
         sourceLanguage = "en-US"
-        // Explicit target languages for Fastlane (otherwise autodetected from folder names under metadataDirectory)
+        // Explicit target languages for Fastlane
+        // Defaults to autoTranslate.targetLanguages
         targetLanguages = setOf("de-DE")
     }
-
+    
     provider = // Choose ONE of the providers from below section "Providers"
 }
 ```
@@ -87,19 +93,22 @@ provider = deepL {
     authKey = "YOUR_API_KEY"
     // (Optional) Overwrite DeepL specific settings for the translations
     // See https://github.com/DeepLcom/deepl-java?tab=readme-ov-file#text-translation-options
-    options = TextTranslationOptions().setPreserveFormatting(true)
+    options = TextTranslationOptions()
+        .setPreserveFormatting(true)
 }
 ```
 
 #### Google
 ```kotlin
 provider = google {
-    // Configure Google TranslateOptions, must set at least credentials
+    // Configure Google TranslateOptions, must set at least credential
     options = TranslateOptions.newBuilder() 
                 // Google offers many different authentication methods, e.g. api key:
                 .setCredentials(ApiKeyCredentials.create("API_KEY"))
-    // Specify model (e.g., "nmt" or "base")
-    model = "base"
+                // E.g. set Google Project Id for quota and billing purposes
+                .setQuotaProjectId("XYZ")
+    // (Optional) Specify model (e.g., "nmt" or "base")
+    model = "base" // default
 }
 ```
 
@@ -107,22 +116,58 @@ provider = google {
 ```kotlin
 
 provider = azure {
-    // Configure Azure TextTranslationClientBuilder, must set at least credentials
+    // Configure Azure TextTranslationClientBuilder, must set at least credential
     options = 
         TextTranslationClientBuilder() 
             // Azure offers different authentication methods, e.g. api key:
             .credential(AzureKeyCredential("YOUR_API_KEY"))
+            // (Optional) E.g. set Azure Resource Id used to authorize requests
+            .resourceId("XYZ")
 }
 ```
 
 #### LibreTranslate
 ```kotlin
 provider = libreTranslate {
-    // Use your own instance or the public one; defaults to https://libretranslate.com
-    // Base URL should be the server root (the plugin uses the /translate endpoint)
-    baseUrl = "https://libretranslate.com"
-    // Optional API key if your instance requires it
+    // (Optional) Base URL should be the server root (the plugin uses the /translate endpoint)
+    // Use your own instance or the public one
+    baseUrl = "https://libretranslate.com" // default
+    // (Optional) API key if your instance requires it
     apiKey = "YOUR_API_KEY"
+}
+```
+
+#### OpenAI
+
+Open AI does not offer a direct translation API like the other providers.
+
+Instead, we leverage [System-Messages](https://platform.openai.com/docs/guides/prompt-engineering) and [Structured-Outputs](https://platform.openai.com/docs/guides/structured-outputs) to get translated texts from [OpenAI's completion API](https://platform.openai.com/docs/api-reference/completions).
+Since there are other providers that are OpenAI compatible, you could also use this e.g. with [Ollama](https://ollama.com/blog/openai-compatibility)
+```kotlin
+provider = openAI {
+    // Configure OpenAI OpenAIOkHttpClient, must set at least apiKey or credential
+    options = OpenAIOkHttpClient.builder()
+        // OpenAI offers to either the API key:
+        .apiKey("YOUR_API_KEY")
+        // Or set another Credential (similiar to Azure):
+        .credential(BearerTokenCredential("YOUR TOKEN"))
+        // (Optional) E.g. change the base url, any OpenAi-Compatible API should work
+        .baseUrl("https://api.openai.com")
+
+    // (Optional) overwrite used model
+    model = "gpt-4o-mini" // default
+
+    // (Optional) overwrite the system message used to guide the assistant
+    systemMessage = """
+            You're a professional translator for software projects, especially Android apps.
+            You are given text in a specified source language, and should translate it in the most suitable way to the specified target language.
+            The given texts can contain XML/HTML tags, as well as special string formatting placeholders like '%1$s',
+             do not translate them and keep them at the position they were originally.
+            The input is a JSON object that contains:
+             - the texts' source language ('srcLang'),
+             - the desired target languages ('targetLangs'),
+             - the list of texts that should be translated.
+        """ // default
 }
 ```
 

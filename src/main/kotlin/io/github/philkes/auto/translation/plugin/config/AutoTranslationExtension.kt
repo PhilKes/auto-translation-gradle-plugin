@@ -57,9 +57,16 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
         return cfg
     }
 
-    /** Create a [LibreTranslateConfig] to use Google's translation api. */
+    /** Create a [LibreTranslateConfig] to use LibreTranslate api. */
     fun libreTranslate(action: LibreTranslateConfig.() -> Unit): LibreTranslateConfig {
         val cfg = objects.newInstance(LibreTranslateConfig::class.java)
+        cfg.action()
+        return cfg
+    }
+
+    /** Create an [OpenAIConfig] to use OpenAI's translation api. */
+    fun openAI(action: OpenAIConfig.() -> Unit): OpenAIConfig {
+        val cfg = objects.newInstance(OpenAIConfig::class.java)
         cfg.action()
         return cfg
     }

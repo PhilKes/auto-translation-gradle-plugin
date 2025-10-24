@@ -23,6 +23,8 @@ dependencies {
     implementation("com.deepl.api:deepl-java:1.10.3")
     implementation("com.google.cloud:google-cloud-translate:2.77.0")
     implementation("com.azure:azure-ai-translation-text:1.1.6")
+    implementation("com.openai:openai-java:4.6.1")
+
     testImplementation(kotlin("test"))
     testImplementation(gradleTestKit())
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
@@ -52,7 +54,16 @@ gradlePlugin {
             description =
                 "Automatically translate your Android project via external Translation providers"
             tags =
-                listOf("android", "translation", "ai", "google", "azure", "deepl", "libretranslate")
+                listOf(
+                    "android",
+                    "translation",
+                    "ai",
+                    "google",
+                    "azure",
+                    "deepl",
+                    "libretranslate",
+                    "openai",
+                )
             implementationClass = "io.github.philkes.auto.translation.plugin.AutoTranslationPlugin"
         }
     }

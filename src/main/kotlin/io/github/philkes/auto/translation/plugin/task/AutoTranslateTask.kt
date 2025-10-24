@@ -5,6 +5,7 @@ import io.github.philkes.auto.translation.plugin.config.DeepLConfig
 import io.github.philkes.auto.translation.plugin.config.FastlaneTranslationConfig
 import io.github.philkes.auto.translation.plugin.config.GoogleConfig
 import io.github.philkes.auto.translation.plugin.config.LibreTranslateConfig
+import io.github.philkes.auto.translation.plugin.config.OpenAIConfig
 import io.github.philkes.auto.translation.plugin.config.ProviderConfig
 import io.github.philkes.auto.translation.plugin.config.StringsXmlTranslationConfig
 import io.github.philkes.auto.translation.plugin.config.setDefaultValues
@@ -12,6 +13,7 @@ import io.github.philkes.auto.translation.plugin.provider.AzureTranslationServic
 import io.github.philkes.auto.translation.plugin.provider.DeepLTranslationService
 import io.github.philkes.auto.translation.plugin.provider.GoogleTranslationService
 import io.github.philkes.auto.translation.plugin.provider.LibreTanslateTranslationService
+import io.github.philkes.auto.translation.plugin.provider.OpenAITranslationService
 import io.github.philkes.auto.translation.plugin.provider.TestTranslationService
 import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import io.github.philkes.auto.translation.plugin.util.isUnitTest
@@ -200,6 +202,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                 is GoogleConfig -> GoogleTranslationService(provider)
                 is AzureConfig -> AzureTranslationService(provider)
                 is LibreTranslateConfig -> LibreTanslateTranslationService(provider)
+                is OpenAIConfig -> OpenAITranslationService(provider)
             }
         } catch (e: Exception) {
             throw GradleException(
