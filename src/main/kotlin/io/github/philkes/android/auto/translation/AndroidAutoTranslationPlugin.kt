@@ -21,8 +21,8 @@ class AndroidAutoTranslationPlugin : Plugin<Project> {
                     extension.sourceLanguage.orNull?.let { task.sourceLanguage.set(it) }
                     extension.targetLanguages.orNull?.let { task.targetLanguages.set(it) }
                     extension.provider.orNull?.let { task.provider.set(it) }
-                    extension.languageCodeOverwrites.orNull?.let {
-                        task.languageCodeOverwrites.set(it)
+                    extension.fastlane.orNull?.let {
+                        task.fastlane.set(it)
                     }
                 }
             },

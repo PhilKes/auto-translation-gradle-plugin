@@ -31,3 +31,6 @@ val isUnitTest: Boolean
 fun setIsUnitTest(value: Boolean) {
     System.setProperty(SYSTEM_PROPERTY_IN_TEST, "" + value)
 }
+
+val Locale.androidCode: String
+    get() = "${language}${if(country.isNullOrBlank()) "" else "-r${country}"}"

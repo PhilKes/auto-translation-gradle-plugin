@@ -125,40 +125,6 @@ class AutoTranslateTaskIntegrationTest {
         assertTrue(!frContent.contains("skip_me"))
     }
 
-    @Test
-    fun `use languageCodeOverwrites but keeps folder name`(@TempDir projectDir: File) {
-        // Base strings.xml
-        val baseValues = File(projectDir, "src/main/res/values").apply { mkdirs() }
-        writeFile(
-            File(baseValues, "strings.xml"),
-            """
-            <resources>
-              <string name="hello">Hello</string>
-            </resources>
-            """
-                .trimIndent(),
-        )
-        setIsUnitTest(true)
-        val project = ProjectBuilder.builder().withProjectDir(projectDir).build()
-        val task = project.tasks.create("autoTranslateOverwrite", AutoTranslateTask::class.java)
-        val config = project.objects.newInstance(DeepLConfig::class.java)
-        config.authKey.set("dummy-key")
-        task.provider.set(config)
-        // Target folder name is 'xyz' but API should use 'DE'
-        task.targetLanguages.set(setOf("xyz"))
-        task.languageCodeOverwrites.set(mapOf("xyz" to "DE"))
-        task.resDirectory.set(project.layout.projectDirectory.dir("src/main/res"))
-
-        // Execute
-        task.translate()
-
-        // Verify output written to the original folder name
-        val xyzStrings = File(projectDir, "src/main/res/values-xyz/strings.xml")
-        assertTrue(xyzStrings.exists())
-        val content = xyzStrings.readText()
-        assertTrue(content.contains("<string name=\"hello\">Hello [DE]</string>"))
-    }
-
     private fun writeFile(file: File, content: String) {
         file.parentFile?.mkdirs()
         file.writeText(content)

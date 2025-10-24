@@ -2,7 +2,7 @@
 <a href="https://plugins.gradle.org/plugin/io.github.philkes.android-auto-translation"><img alt="Gradle Plugin Portal Version" src="https://img.shields.io/gradle-plugin-portal/v/io.github.philkes.android-auto-translation"></a>
 
 
-Plug'n'Play gradle plugin for your Android projects to automatically translate your `strings.xml` into any language using external translation services like DeepL, Azure or Google
+Plug'n'Play gradle plugin for your Android projects to automatically translate your `strings.xml` as well as fastlane documentation into any language using external translation services like DeepL, Azure or Google
 
 ## Features
 
@@ -11,6 +11,7 @@ Plug'n'Play gradle plugin for your Android projects to automatically translate y
 * Supports [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
 * Correctly escapes/unescapes [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) + HTML tags in `strings.xml`
 * Auto-Sorts the translations by their "name" attribute
+* Supports translating fastlane documentation text files
 
 ### Supported APIs
 - [Google-Cloud-Translate](https://cloud.google.com/translate) (Used client: [google-cloud-java/java-translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate))
@@ -27,7 +28,7 @@ plugins {
 
 // Minimal configuration for e.g. DeepL for 2 languages:
 androidAutoTranslate {
-    targetLanguages = setOf("de", "fr")
+    targetLanguages = setOf("de-DE", "fr-FR")
     provider = deepL {
         authKey = "YOUR AUTH KEY"
     }

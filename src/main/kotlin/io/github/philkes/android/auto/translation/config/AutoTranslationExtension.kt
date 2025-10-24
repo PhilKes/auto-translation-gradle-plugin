@@ -1,7 +1,6 @@
 package io.github.philkes.android.auto.translation.config
 
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.listProperty
 import org.gradle.kotlin.dsl.property
@@ -26,17 +25,12 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
      */
     val resDirectory = objects.directoryProperty()
 
+    /** Provide Fastlane translation configuration. */
+    val fastlane: Property<FastlaneTranslationConfig> =
+        objects.property(FastlaneTranslationConfig::class.java)
+
     /** Specify which translation provider to use and set it's options. */
     val provider: Property<ProviderConfig> = objects.property(ProviderConfig::class.java)
-
-    /**
-     * Optionally overwrite mapping from `values-{targetLanguage}` to language code used by the API.
-     *
-     * For example, if you have a `values-xyz` folder which should have `strings.xml` with `de-DE`
-     * translations in it, you can set this to: `mapOf("xyz" to "de-DE")`
-     */
-    val languageCodeOverwrites: MapProperty<String, String> =
-        objects.mapProperty(String::class.java, String::class.java)
 
     /** Create a [DeepLConfig] to use DeepL's translation api. */
     fun deepL(action: DeepLConfig.() -> Unit): DeepLConfig {
@@ -56,6 +50,14 @@ open class AutoTranslationExtension(private val objects: ObjectFactory) {
     fun google(action: GoogleConfig.() -> Unit): GoogleConfig {
         val cfg = objects.newInstance(GoogleConfig::class.java)
         cfg.action()
+        return cfg
+    }
+
+    /** Create a [FastlaneTranslationConfig] to configure Fastlane metadata translation. */
+    fun fastlane(action: FastlaneTranslationConfig.() -> Unit): FastlaneTranslationConfig {
+        val cfg = objects.newInstance(FastlaneTranslationConfig::class.java)
+        cfg.action()
+        this.fastlane.set(cfg)
         return cfg
     }
 }

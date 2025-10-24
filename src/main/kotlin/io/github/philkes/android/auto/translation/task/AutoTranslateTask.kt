@@ -2,6 +2,7 @@ package io.github.philkes.android.auto.translation.task
 
 import io.github.philkes.android.auto.translation.config.AzureConfig
 import io.github.philkes.android.auto.translation.config.DeepLConfig
+import io.github.philkes.android.auto.translation.config.FastlaneTranslationConfig
 import io.github.philkes.android.auto.translation.config.GoogleConfig
 import io.github.philkes.android.auto.translation.config.ProviderConfig
 import io.github.philkes.android.auto.translation.provider.AzureTranslationService
@@ -10,6 +11,7 @@ import io.github.philkes.android.auto.translation.provider.GoogleTranslationServ
 import io.github.philkes.android.auto.translation.provider.TestTranslationService
 import io.github.philkes.android.auto.translation.provider.TranslationService
 import io.github.philkes.android.auto.translation.util.StringsXmlHelper
+import io.github.philkes.android.auto.translation.util.androidCode
 import io.github.philkes.android.auto.translation.util.isUnitTest
 import io.github.philkes.android.auto.translation.util.readableClassName
 import io.github.philkes.android.auto.translation.util.toIsoLocale
@@ -21,7 +23,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
@@ -36,7 +37,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
 
     /**
      * Language ISO-Code of the source strings (`src/main/res/values/strings.xml`). Defaults to:
-     * `en` (English)
+     * `en-US` (English USA)
      */
     @get:Input @get:Optional abstract val sourceLanguage: Property<String>
 
@@ -52,15 +53,13 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
      */
     @get:InputDirectory @get:Optional abstract val resDirectory: DirectoryProperty
 
+    // TOOD: Add ignores for values folders and fastlane metadata files
+
+    /** Fastlane translation configuration wrapper. */
+    @get:Nested @get:Optional abstract val fastlane: Property<FastlaneTranslationConfig>
+
     /** Specify which translation provider to use and set it's options. */
     @get:Nested abstract val provider: Property<ProviderConfig>
-
-    /**
-     * Optionally overwrite mapping from `values-{targetLanguage}` to language code used by the API.
-     * E.g. if for some reason have a `values-xyz` folder which should have `strings.xml` with
-     * german translation in it, you can set this to:
-     */
-    @get:Input @get:Optional abstract val languageCodeOverwrites: MapProperty<String, String>
 
     @get:OutputFiles abstract val changedStringsXmls: ListProperty<File>
 
@@ -69,18 +68,12 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
         group = "translations"
         // Defaults
         resDirectory.convention(project.layout.projectDirectory.dir("src/main/res"))
-        sourceLanguage.convention("en")
+        sourceLanguage.convention("en-US")
         targetLanguages.convention(emptyList())
-        languageCodeOverwrites.convention(emptyMap<String, String>())
         changedStringsXmls.set(
             project.provider {
                 val targets =
-                    resolveTargets(
-                        resDirectory.get().asFile,
-                        targetLanguages.get(),
-                        false,
-                        languageCodeOverwrites.get(),
-                    )
+                    resolveTargets(resDirectory.get().asFile, targetLanguages.get(), false)
                 targets.map { it.value }
             }
         )
@@ -100,12 +93,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
             throw GradleException("Found non ISO Code sourceLanguage: '${sourceLanguage.get()}'")
         }
         val xml = StringsXmlHelper(logger)
-        val targets =
-            resolveTargets(
-                valuesParentFolder,
-                targetLanguages.get(),
-                overwrites = languageCodeOverwrites.get(),
-            )
+        val targets = resolveTargets(valuesParentFolder, targetLanguages.get())
         if (targets.isEmpty()) {
             logger.lifecycle("No targetLanguages resolved. Nothing to translate.")
             return
@@ -150,23 +138,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
 
             val translatedMasked =
                 try {
-                    val folderCode = targetStringsFile.parentFile.name.removePrefix("values-")
-                    val overwriteTarget = languageCodeOverwrites.get()[folderCode]
-                    if (overwriteTarget != null) {
-                        val srcApi = translationService.toApiString(srcLang)
-                        if (logger.isEnabled(LogLevel.INFO)) {
-                            logger.info(
-                                "[$locale] Using overwritten API language '$overwriteTarget' for folder '$folderCode'"
-                            )
-                        }
-                        translationService.translateBatchWithApiCodes(
-                            maskedTexts,
-                            srcApi,
-                            overwriteTarget,
-                        )
-                    } else {
-                        translationService.translateBatch(maskedTexts, srcLang, locale)
-                    }
+                    translationService.translateBatch(maskedTexts, srcLang, locale)
                 } catch (e: Exception) {
                     logger.error("[$locale] Translation failed: ${e.message}", e)
                     return@forEach
@@ -187,6 +159,27 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
             logger.lifecycle(
                 "[$locale] Wrote ${additions.size} new translations. Total strings now: ${merged.size}."
             )
+        }
+
+        // Fastlane metadata translation (optional via wrapper config)
+        fastlane.orNull?.let { fastlaneConfig ->
+            fastlaneConfig.setDefaultValues(project, this)
+            if (fastlaneConfig.enabled.get()) {
+                val metaDir = fastlaneConfig.metadataDirectory.get().asFile
+                val fastlaneSrcLang = sourceLanguage.get().toIsoLocale()
+                if (fastlaneSrcLang == null) {
+                    throw GradleException(
+                        "Non ISO Code 'fastlaneSourceLanguage' provided: '${fastlaneConfig.sourceLanguage.orNull}'"
+                    )
+                }
+                FastlaneTranslator(logger)
+                    .translate(
+                        metadataRoot = metaDir,
+                        service = translationService,
+                        srcLang = fastlaneSrcLang,
+                        targetLanguages = targetLanguages.getOrElse(emptySet()),
+                    )
+            }
         }
     }
 
@@ -212,12 +205,10 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
         valuesParentFolder: File,
         languages: Set<String>,
         log: Boolean = true,
-        overwrites: Map<String, String> = emptyMap(),
     ): Map<Locale, File> {
-        fun pairsFrom(codes: Collection<String>): List<Pair<Locale, String>> =
+        fun pairsFrom(codes: Collection<String>): List<Locale> =
             codes.sorted().mapNotNull { code ->
-                val localeStr = overwrites[code] ?: code
-                val locale = localeStr.toIsoLocale()
+                val locale = code.toIsoLocale()
                 if (locale == null) {
                     if (log)
                         logger.warn(
@@ -225,17 +216,12 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                         )
                     null
                 } else {
-                    if (locale.toString() != code) {
-                        logger.info(
-                            "[$code] mapped values folder Code '$code' to overwritten language '$localeStr'"
-                        )
-                    }
-                    Pair(locale, code)
+                    locale
                 }
             }
         if (languages.isNotEmpty()) {
-            return pairsFrom(languages).associate { (locale, code) ->
-                locale to File(valuesParentFolder, "values-$code/strings.xml")
+            return pairsFrom(languages).associateWith { locale ->
+                File(valuesParentFolder, "values-${locale.androidCode}/strings.xml")
             }
         }
         if (log) logger.lifecycle("Auto. detecting targetLanguages...")
@@ -246,8 +232,8 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                         dir.name.removePrefix("values-")
                     else null
                 } ?: emptyList()
-            pairsFrom(codes).associate { (locale, code) ->
-                locale to File(valuesParentFolder, "values-$code/strings.xml")
+            pairsFrom(codes).associateWith { locale ->
+                File(valuesParentFolder, "values-${locale.androidCode}/strings.xml")
             }
         } else mapOf()
     }
