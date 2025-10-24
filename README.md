@@ -6,16 +6,16 @@ Plug'n'Play gradle plugin for your Android projects to automatically translate y
 
 ## Features
 
-* Evaluate missing translations for any language
-* Automatically translate the missing translations via configured external Translation Service
+* Evaluate missing translations for any existing or new language
+* Automatically translate the missing translations via configured external Translation Provider
 * Supports [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
-* Correctly escapes/unescapes [special characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) + HTML tags in `strings.xml`
-* Auto-Sorts the translations by their key
+* Correctly escapes/unescapes [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) + HTML tags in `strings.xml`
+* Auto-Sorts the translations by their "name" attribute
 
 ### Supported APIs
-- [Google-Cloud-Translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate)
-- [Azure-AI-Text-Translation](https://github.com/Azure/azure-sdk-for-java/tree/azure-ai-translation-text_1.1.6/sdk/translation/azure-ai-translation-text/)
-- [DeepL](https://github.com/DeepLcom/deepl-java)
+- [Google-Cloud-Translate](https://cloud.google.com/translate) (Used client: [google-cloud-java/java-translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate))
+- [Azure-AI-Text-Translation](https://azure.microsoft.com/en-us/products/ai-services/ai-translator) (Used client: [azure-sdk-for-java/azure-ai-translation-text](https://github.com/Azure/azure-sdk-for-java/tree/azure-ai-translation-text_1.1.6/sdk/translation/azure-ai-translation-text/))
+- [DeepL](https://www.deepl.com/en/pro-api) (Used client: [DeepLcom/deepl-java](https://github.com/DeepLcom/deepl-java))
 
 ## Setup
 
@@ -26,19 +26,23 @@ plugins {
 }
 
 // Minimal configuration for e.g. DeepL for 2 languages:
-autoTranslation {
+androidAutoTranslate {
     targetLanguages = setOf("de", "fr")
     provider = deepL {
         authKey = "YOUR AUTH KEY"
     }
 }
 ```
+Run:
+```shell
+./gradlew androidAutoTranslate
+```
 
 ### Configuration Options
-Shown values are either placeholder or the default values
-```kotlin
-autoTranslation {
 
+Shown values are either the default values or placeholders 
+```kotlin
+androidAutoTranslate {
     // (Optional) Language of the 'values/strings.xml' texts
     sourceLanguage = "en"
     
@@ -49,9 +53,9 @@ autoTranslation {
     targetLanguages = setOf(...)
     
     // (Optional) Path to the folder containing the 'values' subfolders
-    valuesDirectory = layout.projectDirectory.dir("src/main/res")
+    resDirectory = layout.projectDirectory.dir("src/main/res")
     
-    // Choose one of the following Providers:
+    // CHOOSE ONE OF THE FOLLOWING PROVIDERS:
     
     // DeepL
     provider = deepL {
@@ -100,6 +104,7 @@ preBuild.dependsOn androidAutoTranslate
 
 #### Add as pre-commit hook
 
+If you want `androidAutoTranslate` to be automatically executed before any git commit:
 1. Copy [pre-commit folder](./pre-commit) to the root of your project
 2. In `build.gradle`:
     ```groovy
@@ -116,4 +121,4 @@ preBuild.dependsOn androidAutoTranslate
     }
     preBuild.dependsOn installLocalGitHooks
     ```
-3. Whenever you commit your changes the exported Excel will be kept up-to-date
+3. Whenever you create a git commit and there are changes in the `{resDirectory}/values/strings.xml`, the translations will be kept up-to-date
