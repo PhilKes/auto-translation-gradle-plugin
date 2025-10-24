@@ -4,12 +4,14 @@ import io.github.philkes.android.auto.translation.config.AzureConfig
 import io.github.philkes.android.auto.translation.config.DeepLConfig
 import io.github.philkes.android.auto.translation.config.FastlaneTranslationConfig
 import io.github.philkes.android.auto.translation.config.GoogleConfig
+import io.github.philkes.android.auto.translation.config.LibreTranslateConfig
 import io.github.philkes.android.auto.translation.config.ProviderConfig
 import io.github.philkes.android.auto.translation.config.StringsXmlTranslationConfig
 import io.github.philkes.android.auto.translation.config.setDefaultValues
 import io.github.philkes.android.auto.translation.provider.AzureTranslationService
 import io.github.philkes.android.auto.translation.provider.DeepLTranslationService
 import io.github.philkes.android.auto.translation.provider.GoogleTranslationService
+import io.github.philkes.android.auto.translation.provider.LibreTanslateTranslationService
 import io.github.philkes.android.auto.translation.provider.TestTranslationService
 import io.github.philkes.android.auto.translation.provider.TranslationService
 import io.github.philkes.android.auto.translation.util.isUnitTest
@@ -197,6 +199,7 @@ abstract class AutoTranslateTask @Inject constructor() : DefaultTask() {
                 is DeepLConfig -> DeepLTranslationService(provider)
                 is GoogleConfig -> GoogleTranslationService(provider)
                 is AzureConfig -> AzureTranslationService(provider)
+                is LibreTranslateConfig -> LibreTanslateTranslationService(provider)
             }
         } catch (e: Exception) {
             throw GradleException(

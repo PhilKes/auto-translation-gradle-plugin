@@ -2,111 +2,153 @@
 <a href="https://plugins.gradle.org/plugin/io.github.philkes.android-auto-translation"><img alt="Gradle Plugin Portal Version" src="https://img.shields.io/gradle-plugin-portal/v/io.github.philkes.android-auto-translation"></a>
 
 
-Plug'n'Play gradle plugin for your Android projects to automatically translate your `strings.xml` as well as fastlane documentation into any language using external translation services like DeepL, Azure or Google
+Plug'n'Play Gradle plugin for Android projects to automatically translate your `strings.xml` and Fastlane metadata into any language using external services like DeepL, Google, Azure, or LibreTranslate.
 
 ## Features
 
-* Evaluate missing translations for any existing or new language
-* Automatically translate the missing translations via configured external Translation Provider
-* Supports [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
-* Correctly escapes/unescapes [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) + HTML tags in `strings.xml`
-* Auto-Sorts the translations by their "name" attribute
-* Supports translating fastlane documentation text files
+- Detect missing translations for any existing or new language
+- Automatically translate missing entries via a configured Translation Provider
+- Supports [Android quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals)
+- Correctly escapes/unescapes [special formatting characters](https://developer.android.com/guide/topics/resources/string-resource#escaping_quotes) and HTML tags in `strings.xml`
+- Auto-sorts translations by their `name` attribute
+- Translate Fastlane metadata text files (.txt) recursively; each file is sent as a single string
 
 ### Supported APIs
-- [Google-Cloud-Translate](https://cloud.google.com/translate) (Used client: [google-cloud-java/java-translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate))
-- [Azure-AI-Text-Translation](https://azure.microsoft.com/en-us/products/ai-services/ai-translator) (Used client: [azure-sdk-for-java/azure-ai-translation-text](https://github.com/Azure/azure-sdk-for-java/tree/azure-ai-translation-text_1.1.6/sdk/translation/azure-ai-translation-text/))
-- [DeepL](https://www.deepl.com/en/pro-api) (Used client: [DeepLcom/deepl-java](https://github.com/DeepLcom/deepl-java))
+- [Google Cloud Translation](https://cloud.google.com/translate) (Client: [google-cloud-java/java-translate](https://github.com/googleapis/google-cloud-java/tree/main/java-translate))
+- [Azure AI Translator](https://azure.microsoft.com/en-us/products/ai-services/ai-translator) (Client: [azure-ai-translation-text](https://github.com/Azure/azure-sdk-for-java/tree/azure-ai-translation-text_1.1.6/sdk/translation/azure-ai-translation-text/))
+- [DeepL](https://www.deepl.com/en/pro-api) (Client: [DeepLcom/deepl-java](https://github.com/DeepLcom/deepl-java))
+- [LibreTranslate](https://libretranslate.com/) (Self-hosted or public instances)
 
 ## Setup
 
 In `build.gradle.kts`:
-```groovy
+```kotlin
 plugins {
     id("io.github.philkes.android-auto-translation") version "1.0.0"
 }
 
-// Minimal configuration for e.g. DeepL for 2 languages:
+// Minimal example: translate strings.xml for all present language folders using DeepL
 androidAutoTranslate {
-    targetLanguages = setOf("de-DE", "fr-FR")
     provider = deepL {
-        authKey = "YOUR AUTH KEY"
+        authKey = "YOUR_AUTH_KEY"
     }
 }
 ```
+
 Run:
 ```shell
 ./gradlew androidAutoTranslate
 ```
 
-### Configuration Options
+## Configuration
 
-Shown values are either the default values or placeholders 
+Shown values are defaults or placeholders.
 ```kotlin
 androidAutoTranslate {
-    // (Optional) Language of the 'values/strings.xml' texts
-    sourceLanguage = "en"
-    
-    // (Optional) Languages that should be translated into (ISO codes)
-    // By default target languages are evaluated from which 'values-{targetLanguage}' folders exist
-    // (non-language values folders like `values-night` or `values-v31` are ignored)
-    // If a `values-{targetLanguage}` does not yet exist, the plugin will create it
-    targetLanguages = setOf(...)
-    
-    // (Optional) Path to the folder containing the 'values' subfolders
-    resDirectory = layout.projectDirectory.dir("src/main/res")
-    
-    // CHOOSE ONE OF THE FOLLOWING PROVIDERS:
-    
-    // DeepL
-    provider = deepL {
-        // Authentication Key for DeepL
-        authKey = "YOUR API KEY"
-        
-        // (Optional) Overwrite DeepL specific settings for the translations
-        // See https://github.com/DeepLcom/deepl-java?tab=readme-ov-file#text-translation-options
-        options = TextTranslationOptions()
+    // Language of the base strings (values/strings.xml)
+    // Default: "en-US"
+    sourceLanguage = "en-US"
+
+    // Explicit target languages (ISO codes like "de", "fr", "pt-BR").
+    // If omitted or empty, targets are auto-detected from existing values-* folders.
+    targetLanguages = listOf(/* ... */)
+
+    // When auto-detecting targets, you can exclude some languages
+    excludeLanguages = listOf(/* e.g. "fr", "es" */)
+
+    // Configure strings.xml translation
+    translateStringsXml {
+        enabled = true // default
+        // Path to the folder containing the `values/strings.xml` and `values-{targetLanguage}` folders.
+        resDirectory = project.layout.projectDirectory.dir("src/main/res") // default
     }
-    
-    // Google
-    provider = google {
-        // Options builder directly from Google Client library, at least credentials have to be set
-        options = TranslateOptions.newBuilder()
-                // Google offers many different authentication methods, e.g. api key:
-                .setCredentials(ApiKeyCredentials.create("API KEY"))
-        
-        // (Optional) Overwrite model to use for translations
-        model = "base"
-    }   
-    
-    // Azure
-    provider = azure {
-        // Options builder directly from Azure Client library, at least credentials have to be set
-        options = TextTranslationClientBuilder()
-                // Azure offers different authentication methods, e.g. api key:
-                .credential(AzureKeyCredential("YOUR API KEY"))
+
+    // Configure Fastlane metadata translation
+    translateFastlane {
+        enabled = false // default
+        // Default: project.layout.projectDirectory.dir("fastlane/metadata/android")
+        metadataDirectory = project.layout.projectDirectory.dir("fastlane/metadata/android") // default
+        // Defaults to androidAutoTranslate.sourceLanguage
+        sourceLanguage = "en-US"
+        // Explicit target languages for Fastlane (otherwise autodetected from folder names under metadataDirectory)
+        targetLanguages = setOf("de-DE")
     }
+
+    provider = // Choose ONE of the providers from below section "Providers"
 }
 ```
 
-#### Plurals
+### Providers
 
-Android supports [quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals).
-To support these plurals, for every `<plurals>` in the `strings.xml` there are multiple `<item>` for all the supported quantities.
-For every `<item>` in the source `strings.xml` file the translations will be requested separately.
-
-
-#### Execute on build automatically
-
-In `build.gradle`:
-```groovy
-preBuild.dependsOn androidAutoTranslate
+#### DeepL
+```kotlin
+provider = deepL {
+    // Authentication Key for DeepL API
+    authKey = "YOUR_API_KEY"
+    // (Optional) Overwrite DeepL specific settings for the translations
+    // See https://github.com/DeepLcom/deepl-java?tab=readme-ov-file#text-translation-options
+    options = TextTranslationOptions().setPreserveFormatting(true)
+}
 ```
 
-#### Add as pre-commit hook
+#### Google
+```kotlin
+provider = google {
+    // Configure Google TranslateOptions, must set at least credentials
+    options = TranslateOptions.newBuilder() 
+                // Google offers many different authentication methods, e.g. api key:
+                .setCredentials(ApiKeyCredentials.create("API_KEY"))
+    // Specify model (e.g., "nmt" or "base")
+    model = "base"
+}
+```
 
-If you want `androidAutoTranslate` to be automatically executed before any git commit:
-1. Copy [pre-commit folder](./pre-commit) to the root of your project
+#### Azure
+```kotlin
+
+provider = azure {
+    // Configure Azure TextTranslationClientBuilder, must set at least credentials
+    options = 
+        TextTranslationClientBuilder() 
+            // Azure offers different authentication methods, e.g. api key:
+            .credential(AzureKeyCredential("YOUR_API_KEY"))
+}
+```
+
+#### LibreTranslate
+```kotlin
+provider = libreTranslate {
+    // Use your own instance or the public one; defaults to https://libretranslate.com
+    // Base URL should be the server root (the plugin uses the /translate endpoint)
+    baseUrl = "https://libretranslate.com"
+    // Optional API key if your instance requires it
+    apiKey = "YOUR_API_KEY"
+}
+```
+
+### Fastlane specifics
+
+- The Fastlane metadata root contains locale-named subfolders (e.g., `en-US`, `de-DE`).
+- All `.txt` files inside these folders (recursively) are translated.
+- The entire content of each `.txt` file is sent as a single string (no line splitting).
+- When targets are autodetected, you can exclude some via `excludeLanguages` on the main task.
+
+### Plurals
+
+Android supports [quantity strings (plurals)](https://developer.android.com/guide/topics/resources/string-resource#Plurals).
+For every `<item>` quantity in the sourceLanguage's `strings.xml`, a translation is requested and then written as a single `<plurals>` block with ordered quantities.
+
+### Run on build (optional)
+
+If you want the `androidAutoTranslate` to run automatically on every build, in `build.gradle.kts`:
+```kotlin
+preBuild.dependsOn("androidAutoTranslate")
+```
+
+### Pre-commit hook (optional)
+
+If you want `androidAutoTranslate` to run automatically before any git commit:
+1. Copy the [pre-commit folder](./pre-commit) to the root of your project
 2. In `build.gradle`:
     ```groovy
     tasks.register('installLocalGitHooks', Copy) {
@@ -122,4 +164,4 @@ If you want `androidAutoTranslate` to be automatically executed before any git c
     }
     preBuild.dependsOn installLocalGitHooks
     ```
-3. Whenever you create a git commit and there are changes in the `{resDirectory}/values/strings.xml`, the translations will be kept up-to-date
+3. Whenever you create a git commit and there are changes in `src/main/res/values/strings.xml`, translations will be kept up to date.
