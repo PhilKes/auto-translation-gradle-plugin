@@ -4,7 +4,9 @@ import com.google.cloud.translate.TranslateOptions
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 
 abstract class GoogleConfig @Inject constructor(objects: ObjectFactory) : ProviderConfig {
 
@@ -19,18 +21,19 @@ abstract class GoogleConfig @Inject constructor(objects: ObjectFactory) : Provid
      * (see
      * [Google-Cloud-Java#about-cloud-translation](https://github.com/googleapis/google-cloud-java/tree/main/java-translate#about-cloud-translation))
      */
-    val options: Property<TranslateOptions.Builder> =
-        objects.property(TranslateOptions.Builder::class.java)
+    @get:Input
+    @get:Optional
+    val options: Property<TranslateOptions> = objects.property(TranslateOptions::class.java)
 
     /**
      * Overwrite model used for translation.
      *
      * (see [com.google.cloud.translate.Translate.TranslateOption.model])
      */
-    val model: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional val model: Property<String> = objects.property(String::class.java)
 
     init {
-        options.convention(TranslateOptions.getDefaultInstance().toBuilder())
+        options.convention(TranslateOptions.getDefaultInstance())
     }
 
     @Internal

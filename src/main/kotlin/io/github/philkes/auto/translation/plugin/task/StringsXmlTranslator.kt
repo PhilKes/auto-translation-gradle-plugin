@@ -1,5 +1,6 @@
 package io.github.philkes.auto.translation.plugin.task
 
+import io.github.philkes.auto.translation.plugin.provider.TextFormat
 import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import io.github.philkes.auto.translation.plugin.util.StringsXmlHelper
 import io.github.philkes.auto.translation.plugin.util.androidCode
@@ -60,7 +61,7 @@ class StringsXmlTranslator(private val logger: Logger) {
 
             val translatedMasked =
                 try {
-                    service.translateBatch(maskedTexts, srcLang, locale)
+                    service.translateBatch(maskedTexts, TextFormat.HTML, srcLang, locale)
                 } catch (e: Exception) {
                     logger.error("[$locale] Translation failed: ${e.message}", e)
                     return@forEach

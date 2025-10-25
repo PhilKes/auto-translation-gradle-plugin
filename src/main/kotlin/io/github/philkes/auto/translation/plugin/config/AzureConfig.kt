@@ -1,9 +1,11 @@
 package io.github.philkes.auto.translation.plugin.config
 
 import com.azure.ai.translation.text.TextTranslationClientBuilder
+import io.github.philkes.auto.translation.plugin.provider.azure.AzureTextTranslationClientBuilder
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 
 abstract class AzureConfig @Inject constructor(objects: ObjectFactory) : ProviderConfig {
@@ -16,8 +18,9 @@ abstract class AzureConfig @Inject constructor(objects: ObjectFactory) : Provide
      * (see
      * [Azure/ai-translation-text-readme](https://learn.microsoft.com/en-us/java/api/overview/azure/ai-translation-text-readme?view=azure-java-stable#authentication))
      */
-    val options: Property<TextTranslationClientBuilder> =
-        objects.property(TextTranslationClientBuilder::class.java)
+    @get:Input
+    val options: Property<AzureTextTranslationClientBuilder> =
+        objects.property(AzureTextTranslationClientBuilder::class.java)
 
     @Internal
     override fun isValid(): Boolean {

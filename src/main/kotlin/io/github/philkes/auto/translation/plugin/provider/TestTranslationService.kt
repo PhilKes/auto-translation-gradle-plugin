@@ -5,9 +5,10 @@ internal class TestTranslationService() : TranslationService() {
 
     override fun translateBatch(
         texts: List<String>,
+        textFormat: TextFormat,
         sourceLanguage: String,
         targetLanguage: String,
     ): List<String> {
-        return texts.map { "$it [${targetLanguage.uppercase()}]" }
+        return texts.map { "$it [${targetLanguage.uppercase().replace('-', '_')}]" }
     }
 }

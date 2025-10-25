@@ -5,13 +5,13 @@ import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.listProperty
 import org.gradle.kotlin.dsl.property
 
-open class AutoTranslationExtension(private val objects: ObjectFactory) {
+open class AutoTranslateExtension(private val objects: ObjectFactory) {
 
     /**
      * Language of the source strings (`src/main/res/values/strings.xml`). Defaults to: `en`
      * (English)
      */
-    val sourceLanguage = objects.property<String>().convention("en")
+    val sourceLanguage = objects.property<String>().convention("en-US")
 
     /**
      * Language ISO-Codes (from `values-{iso-code}` folder names) to translate. By defaults detects

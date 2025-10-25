@@ -1,9 +1,11 @@
-package io.github.philkes.auto.translation.plugin.provider
+package io.github.philkes.auto.translation.plugin.provider.openai
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openai.client.OpenAIClient
 import com.openai.models.chat.completions.ChatCompletionCreateParams
 import io.github.philkes.auto.translation.plugin.config.OpenAIConfig
+import io.github.philkes.auto.translation.plugin.provider.TextFormat
+import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import io.github.philkes.auto.translation.plugin.util.DOLLAR
 
 class OpenAITranslationService(
@@ -14,7 +16,7 @@ class OpenAITranslationService(
 
     constructor(
         config: OpenAIConfig
-    ) : this(config.options.get().build(), config.model.get(), config.systemMessage.get())
+    ) : this(config.options.get().toActualBuilder().build(), config.model.get(), config.systemMessage.get())
 
     private val objectMapper = ObjectMapper()
     private val exampleMsg: String
@@ -27,6 +29,7 @@ class OpenAITranslationService(
 
     override fun translateBatch(
         texts: List<String>,
+        textFormat: TextFormat,
         sourceLanguage: String,
         targetLanguage: String,
     ): List<String> {
@@ -72,7 +75,7 @@ class OpenAITranslationService(
                 You're a professional translator for software projects, especially Android apps.
                 You are given text in a specified source language, and should translate it in the most suitable way to the specified target language.
                 The given texts can contain XML/HTML tags, as well as special string formatting placeholders like '%1${DOLLAR}s',
-                 do not translate them and keep them at the position they were originally.
+                 do not translate them and keep them at the position they were originally by preserving the format of the text.
                 The input is a JSON object that contains:
                  - the texts' source language ('srcLang'),
                  - the desired target languages ('targetLangs'),

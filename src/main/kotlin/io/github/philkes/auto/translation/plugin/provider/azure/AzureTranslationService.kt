@@ -1,16 +1,19 @@
-package io.github.philkes.auto.translation.plugin.provider
+package io.github.philkes.auto.translation.plugin.provider.azure
 
 import com.azure.ai.translation.text.TextTranslationClient
 import com.azure.ai.translation.text.models.TextType
 import com.azure.ai.translation.text.models.TranslateOptions
 import io.github.philkes.auto.translation.plugin.config.AzureConfig
+import io.github.philkes.auto.translation.plugin.provider.TextFormat
+import io.github.philkes.auto.translation.plugin.provider.TranslationService
 
 class AzureTranslationService(private val service: TextTranslationClient) : TranslationService() {
 
-    constructor(config: AzureConfig) : this(config.options.get().buildClient())
+    constructor(config: AzureConfig) : this(config.options.get().toActualBuilder().buildClient())
 
     override fun translateBatch(
         texts: List<String>,
+        textFormat: TextFormat,
         sourceLanguage: String,
         targetLanguage: String,
     ): List<String> {
@@ -18,7 +21,10 @@ class AzureTranslationService(private val service: TextTranslationClient) : Tran
             TranslateOptions()
                 .setSourceLanguage(sourceLanguage)
                 .addTargetLanguage(targetLanguage)
-                .setTextType(TextType.HTML)
+                .setTextType(when(textFormat){
+                    TextFormat.TEXT -> TextType.PLAIN
+                    TextFormat.HTML -> TextType.HTML
+                })
         val translations = service.translate(texts, translateOptions)
         return translations.map { it.translations.first().text }
     }

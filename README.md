@@ -49,15 +49,14 @@ Shown values are defaults or placeholders.
 ```kotlin
 autoTranslate {
     // Language of the source strings (values/strings.xml)
-    // Default: "en-US"
-    sourceLanguage = "en-US"
+    sourceLanguage = "en-US" // default
 
     // Explicit target languages (ISO codes like "de", "fr", "pt-BR").
-    // If omitted or empty, targets are auto-detected from existing values-* folders.
+    // By default targetLanguages are auto-detected from existing values-* folders.
     targetLanguages = listOf(/* ... */)
 
     // When auto-detecting targets, you can exclude some languages
-    excludeLanguages = listOf(/* e.g. "fr", "es" */)
+    excludeLanguages = listOf()  // default
 
     // Configure strings.xml translation
     translateStringsXml {
@@ -71,13 +70,11 @@ autoTranslate {
         enabled = false // default
         // Path to fastlane metadata root folder, containing `{targetLanguage` folders
         // with description, changelogs txt files
-        metadataDirectory = project.layout.projectDirectory.dir("fastlane/metadata/android") // default
+        metadataDirectory = project.rootProject.layout.projectDirectory.dir("fastlane/metadata/android") // default
         // Language of the source fastlane documentation
-        // Defaults to autoTranslate.sourceLanguage
-        sourceLanguage = "en-US"
+        sourceLanguage = "en-US"  // Defaults to autoTranslate.sourceLanguage
         // Explicit target languages for Fastlane
-        // Defaults to autoTranslate.targetLanguages
-        targetLanguages = setOf("de-DE")
+        targetLanguages = setOf("de-DE") // Defaults to autoTranslate.targetLanguages
     }
     
     provider = // Choose ONE of the providers from below section "Providers"
@@ -88,18 +85,22 @@ autoTranslate {
 
 #### DeepL
 ```kotlin
+import io.github.philkes.auto.translation.plugin.provider.deepl.DeepLTextTranslationOptions
+//...
 provider = deepL {
     // Authentication Key for DeepL API
     authKey = "YOUR_API_KEY"
     // (Optional) Overwrite DeepL specific settings for the translations
     // See https://github.com/DeepLcom/deepl-java?tab=readme-ov-file#text-translation-options
-    options = TextTranslationOptions()
+    options = DeepLTextTranslationOptions()
         .setPreserveFormatting(true)
 }
 ```
 
 #### Google
 ```kotlin
+import com.google.cloud.translate.TranslateOptions
+//...
 provider = google {
     // Configure Google TranslateOptions, must set at least credential
     options = TranslateOptions.newBuilder() 
@@ -107,6 +108,7 @@ provider = google {
                 .setCredentials(ApiKeyCredentials.create("API_KEY"))
                 // E.g. set Google Project Id for quota and billing purposes
                 .setQuotaProjectId("XYZ")
+                .build()
     // (Optional) Specify model (e.g., "nmt" or "base")
     model = "base" // default
 }
@@ -114,15 +116,16 @@ provider = google {
 
 #### Azure
 ```kotlin
-
+import io.github.philkes.auto.translation.plugin.provider.azure.AzureTextTranslationClientBuilder
+//...
 provider = azure {
     // Configure Azure TextTranslationClientBuilder, must set at least credential
-    options = 
-        TextTranslationClientBuilder() 
+    options =
+        AzureTextTranslationClientBuilder() 
             // Azure offers different authentication methods, e.g. api key:
-            .credential(AzureKeyCredential("YOUR_API_KEY"))
-            // (Optional) E.g. set Azure Resource Id used to authorize requests
-            .resourceId("XYZ")
+            .credential("YOUR_API_KEY")
+            // (Optional) E.g. set Azure Resource Id and region used to authorize requests
+            .resourceId("XYZ").region("Region")
 }
 ```
 
@@ -144,13 +147,12 @@ Open AI does not offer a direct translation API like the other providers.
 Instead, we leverage [System-Messages](https://platform.openai.com/docs/guides/prompt-engineering) and [Structured-Outputs](https://platform.openai.com/docs/guides/structured-outputs) to get translated texts from [OpenAI's completion API](https://platform.openai.com/docs/api-reference/completions).
 Since there are other providers that are OpenAI compatible, you could also use this e.g. with [Ollama](https://ollama.com/blog/openai-compatibility)
 ```kotlin
+import io.github.philkes.auto.translation.plugin.provider.OpenAIOkHttpClientBuilder
+//...
 provider = openAI {
     // Configure OpenAI OpenAIOkHttpClient, must set at least apiKey or credential
-    options = OpenAIOkHttpClient.builder()
-        // OpenAI offers to either the API key:
+    options = OpenAIOkHttpClientBuilder
         .apiKey("YOUR_API_KEY")
-        // Or set another Credential (similiar to Azure):
-        .credential(BearerTokenCredential("YOUR TOKEN"))
         // (Optional) E.g. change the base url, any OpenAi-Compatible API should work
         .baseUrl("https://api.openai.com")
 
@@ -162,7 +164,7 @@ provider = openAI {
             You're a professional translator for software projects, especially Android apps.
             You are given text in a specified source language, and should translate it in the most suitable way to the specified target language.
             The given texts can contain XML/HTML tags, as well as special string formatting placeholders like '%1$s',
-             do not translate them and keep them at the position they were originally.
+             do not translate them and keep them at the position they were originally by preserving the format of the text.
             The input is a JSON object that contains:
              - the texts' source language ('srcLang'),
              - the desired target languages ('targetLangs'),
@@ -174,10 +176,11 @@ provider = openAI {
 ### Github Action
 
 If you want to integrate the plugin into a Github Action Workflow:
-1. Add the [github-action/add-missing-translations.yaml](github-action/add-missing-translations.yaml) to your repo's `.github/workflows` folder
-2. (Optional): Customize the `on` triggers, `commit_message` in the `add-missing-translation.yaml` if needed
-3. To not expose your API Key/Credentials for your configured API, add [Github Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) for them. For example, if you use DeepL with an API Key, create a secret called "AUTO_TRANSLATE_API_KEY"
-3. In your `build.gradle.kts`, set your API credentials to be read from an environment variable, e.g. for DeepL:
+1. Add the plugin as described in [Setup](#Setup)
+2. Add the [github-action/add-missing-translations.yaml](github-action/add-missing-translations.yaml) to your repo's `.github/workflows` folder
+3. (Optional): Customize the `on` triggers, `commit_message` in the `add-missing-translation.yaml` if needed
+4. To not expose your API Key/Credentials for your configured API, add [Github Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) for them. For example, if you use DeepL with an API Key, create a secret called "AUTO_TRANSLATE_API_KEY"
+5. In your `build.gradle.kts`, set your API credentials to be read from an environment variable, e.g. for DeepL:
     ```kotlin
     autoTranslate {
         //...
@@ -186,7 +189,7 @@ If you want to integrate the plugin into a Github Action Workflow:
         }    
     }
     ```
-4. In your `.github/workflows/add-missing-translation.yaml` make sure the environment variables are properly set:
+6. In your `.github/workflows/add-missing-translation.yaml` make sure the environment variables are properly set:
     ```yaml
       #...
       jobs:

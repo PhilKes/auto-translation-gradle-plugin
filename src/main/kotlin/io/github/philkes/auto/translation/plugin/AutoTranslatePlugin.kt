@@ -1,16 +1,16 @@
 package io.github.philkes.auto.translation.plugin
 
-import io.github.philkes.auto.translation.plugin.config.AutoTranslationExtension
+import io.github.philkes.auto.translation.plugin.config.AutoTranslateExtension
 import io.github.philkes.auto.translation.plugin.task.AutoTranslateTask
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
-class AutoTranslationPlugin : Plugin<Project> {
+class AutoTranslatePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         val extension =
-            project.extensions.create(AUTO_TRANSLATE_TASK, AutoTranslationExtension::class.java)
+            project.extensions.create(AUTO_TRANSLATE_TASK, AutoTranslateExtension::class.java)
 
         project.tasks.register(
             AUTO_TRANSLATE_TASK,

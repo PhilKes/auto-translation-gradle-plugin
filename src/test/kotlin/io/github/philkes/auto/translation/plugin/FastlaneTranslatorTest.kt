@@ -1,6 +1,13 @@
 package io.github.philkes.auto.translation.plugin
 
+import com.azure.ai.translation.text.TextTranslationServiceVersion
+import com.azure.ai.translation.text.models.TextTranslationAudience
+import com.azure.core.http.policy.HttpLogDetailLevel
+import com.deepl.api.Formality
+import com.deepl.api.TextTranslationOptions
+import io.github.philkes.auto.translation.plugin.provider.azure.AzureTextTranslationClientBuilder
 import io.github.philkes.auto.translation.plugin.provider.TestTranslationService
+import io.github.philkes.auto.translation.plugin.provider.deepl.DeepLTextTranslationOptions
 import io.github.philkes.auto.translation.plugin.task.FastlaneTranslator
 import io.github.philkes.auto.translation.plugin.util.setIsUnitTest
 import io.github.philkes.auto.translation.plugin.util.toIsoLocale
@@ -9,6 +16,12 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.NotSerializableException
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.time.Duration
 
 class FastlaneTranslatorTest {
 
@@ -44,4 +57,5 @@ class FastlaneTranslatorTest {
         val deShort = File(deDir, "short_description.txt").readText()
         assertEquals("This is the short description [DE_DE]", deShort)
     }
+
 }

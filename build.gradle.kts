@@ -52,11 +52,13 @@ gradlePlugin {
             id = "io.github.philkes.auto-translation"
             displayName = "Auto Translations"
             description =
-                "Automatically translate your Android project via external Translation providers"
+                "Auto. translate your Android project (strings.xml + Fastlane) into any language using Translation providers like DeepL, Google, Azure AI, OpenAI, LibreTranslate"
             tags =
                 listOf(
                     "android",
                     "translation",
+                    "fastlane",
+                    "strings.xml",
                     "ai",
                     "google",
                     "azure",
@@ -64,7 +66,7 @@ gradlePlugin {
                     "libretranslate",
                     "openai",
                 )
-            implementationClass = "io.github.philkes.auto.translation.plugin.AutoTranslationPlugin"
+            implementationClass = "io.github.philkes.auto.translation.plugin.AutoTranslatePlugin"
         }
     }
 }

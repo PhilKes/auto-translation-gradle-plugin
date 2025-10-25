@@ -1,8 +1,8 @@
 package io.github.philkes.auto.translation.plugin.config
 
-import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.ChatModel
-import io.github.philkes.auto.translation.plugin.provider.OpenAITranslationService
+import io.github.philkes.auto.translation.plugin.provider.openai.OpenAIOkHttpClientBuilder
+import io.github.philkes.auto.translation.plugin.provider.openai.OpenAITranslationService
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -16,15 +16,11 @@ abstract class OpenAIConfig @Inject constructor(objects: ObjectFactory) : Provid
     /**
      * OpenAI specific options for the Translation completions.
      *
-     * At least [OpenAIOkHttpClient.Builder.apiKey] or [OpenAIOkHttpClient.Builder.credential] has
-     * to be set.
-     *
-     * (see
-     * [OpenAI/openai-java](https://github.com/openai/openai-java?tab=readme-ov-file#microsoft-azure))
+     * At least apiKey has to be set on [OpenAIOkHttpClientBuilder].
      */
     @get:Input
-    val options: Property<OpenAIOkHttpClient.Builder> =
-        objects.property(OpenAIOkHttpClient.Builder::class.java)
+    val options: Property<OpenAIOkHttpClientBuilder> =
+        objects.property(OpenAIOkHttpClientBuilder::class.java)
 
     /**
      * Optional overwrite model to use.

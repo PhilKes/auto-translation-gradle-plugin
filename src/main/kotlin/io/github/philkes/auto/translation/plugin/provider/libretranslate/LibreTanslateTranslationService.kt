@@ -1,8 +1,10 @@
-package io.github.philkes.auto.translation.plugin.provider
+package io.github.philkes.auto.translation.plugin.provider.libretranslate
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.philkes.auto.translation.plugin.config.LibreTranslateConfig
+import io.github.philkes.auto.translation.plugin.provider.TextFormat
+import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.StringEntity
@@ -16,9 +18,11 @@ class LibreTanslateTranslationService(private val client: LibreTranslateClient) 
 
     override fun translateBatch(
         texts: List<String>,
+        textFormat: TextFormat,
         sourceLanguage: String,
         targetLanguage: String,
     ): List<String> {
+        // TODO: is there text format option?
         return texts.map { client.translate(it, sourceLanguage, targetLanguage).translatedText }
     }
 }

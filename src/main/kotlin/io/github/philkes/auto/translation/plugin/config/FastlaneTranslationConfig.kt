@@ -52,12 +52,13 @@ open class FastlaneTranslationConfig @Inject constructor(objects: ObjectFactory)
 internal fun FastlaneTranslationConfig.setDefaultValues(project: Project, task: AutoTranslateTask) {
     enabled.convention(false)
     metadataDirectory.convention(
-        project.provider {
-            if (enabled.get()) {
-                project.layout.projectDirectory.dir("fastlane/metadata/android")
-            } else null
+        enabled.map {
+            if (it) project.rootProject.layout.projectDirectory.dir("fastlane/metadata/android")
+            else project.layout.projectDirectory // TODO: Using some existing directory to not get a
+            // IllegalArgument
         }
     )
+
     sourceLanguage.convention(task.sourceLanguage)
     targetLanguages.convention(task.targetLanguages)
 }

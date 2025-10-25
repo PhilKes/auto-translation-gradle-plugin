@@ -35,4 +35,8 @@ fun setIsUnitTest(value: Boolean) {
 val Locale.androidCode: String
     get() = "${language}${if(country.isNullOrBlank()) "" else "-r${country}"}"
 
+val Locale.isoCode: String
+    get() = ("${language}${"-${country}".takeIf { !country.isNullOrBlank() } ?: ""}")
+
+
 val DOLLAR = "\$"

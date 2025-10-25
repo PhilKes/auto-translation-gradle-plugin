@@ -1,6 +1,7 @@
 package io.github.philkes.auto.translation.plugin.config
 
 import com.deepl.api.TextTranslationOptions
+import io.github.philkes.auto.translation.plugin.provider.deepl.DeepLTextTranslationOptions
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -21,8 +22,8 @@ abstract class DeepLConfig @Inject constructor(objects: ObjectFactory) : Provide
      */
     @get:Input
     @get:Optional
-    val options: Property<TextTranslationOptions> =
-        objects.property(TextTranslationOptions::class.java)
+    val options: Property<DeepLTextTranslationOptions> =
+        objects.property(DeepLTextTranslationOptions::class.java)
 
     @Internal
     override fun isValid(): Boolean {
