@@ -171,6 +171,37 @@ provider = openAI {
 }
 ```
 
+### Github Action
+
+If you want to integrate the plugin into a Github Action Workflow:
+1. Add the [github-action/add-missing-translations.yaml](github-action/add-missing-translations.yaml) to your repo's `.github/workflows` folder
+2. (Optional): Customize the `on` triggers, `commit_message` in the `add-missing-translation.yaml` if needed
+3. To not expose your API Key/Credentials for your configured API, add [Github Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) for them. For example, if you use DeepL with an API Key, create a secret called "AUTO_TRANSLATE_API_KEY"
+3. In your `build.gradle.kts`, set your API credentials to be read from an environment variable, e.g. for DeepL:
+    ```kotlin
+    autoTranslate {
+        //...
+        provider = deepL {
+            apiKey = System.getenv("AUTO_TRANSLATE_API_KEY")
+        }    
+    }
+    ```
+4. In your `.github/workflows/add-missing-translation.yaml` make sure the environment variables are properly set:
+    ```yaml
+      #...
+      jobs:
+        auto-translate:
+          #...
+          steps:
+            #...
+            - name: Run Gradle autoTranslate
+              env:
+                AUTO_TRANSLATE_API_KEY: ${{ secrets.AUTO_TRANSLATE_API_KEY }}
+              run: ./gradlew autoTranslate
+    ```
+5. Now when you push new changes to your `strings.xml` or fastlane files, the plugin will be automatically run and the changes commited by Github Actions
+    
+
 ### Fastlane specifics
 
 - The Fastlane metadata root contains locale-named subfolders (e.g., `en-US`, `de-DE`).
