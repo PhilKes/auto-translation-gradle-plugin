@@ -5,6 +5,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.philkes.auto.translation.plugin.config.LibreTranslateConfig
 import io.github.philkes.auto.translation.plugin.provider.TextFormat
 import io.github.philkes.auto.translation.plugin.provider.TranslationService
+import io.github.philkes.auto.translation.plugin.util.isoCode
+import java.util.Locale
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.StringEntity
@@ -27,6 +29,17 @@ class LibreTanslateTranslationService(private val client: LibreTranslateClient) 
             val response = client.translate(text, sourceLanguage, targetLanguage)
             response.error?.let { error -> throw IllegalArgumentException(error) }
             response.translatedText!!
+        }
+    }
+
+    /**
+     * see [Libretranslate API Languages](https://docs.libretranslate.com/api/operations/languages/)
+     */
+    override fun localeToApiString(locale: Locale, isSourceLang: Boolean): String {
+        return when (locale) {
+            Locale.SIMPLIFIED_CHINESE -> "zh-Hans"
+            Locale.TRADITIONAL_CHINESE -> "zh-Hant"
+            else -> if (locale.language == "pt") locale.isoCode else locale.language
         }
     }
 }
