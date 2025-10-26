@@ -14,8 +14,8 @@ abstract class TranslationService {
         return translateBatch(
             texts,
             textFormat,
-            localeToApiString(sourceLanguage),
-            localeToApiString(targetLanguage),
+            localeToApiString(sourceLanguage, true),
+            localeToApiString(targetLanguage, false),
         )
     }
 
@@ -28,7 +28,7 @@ abstract class TranslationService {
     ): List<String>
 
     /** Convert the given `Locale` to the API specific String */
-    protected open fun localeToApiString(locale: Locale): String {
+    protected open fun localeToApiString(locale: Locale, isSourceLang: Boolean): String {
         return locale.isoCode
     }
 }

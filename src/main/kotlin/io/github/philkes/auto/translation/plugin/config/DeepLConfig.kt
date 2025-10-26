@@ -1,6 +1,5 @@
 package io.github.philkes.auto.translation.plugin.config
 
-import com.deepl.api.TextTranslationOptions
 import io.github.philkes.auto.translation.plugin.provider.deepl.DeepLTextTranslationOptions
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
@@ -25,6 +24,10 @@ abstract class DeepLConfig @Inject constructor(objects: ObjectFactory) : Provide
     val options: Property<DeepLTextTranslationOptions> =
         objects.property(DeepLTextTranslationOptions::class.java)
 
+    init {
+        options.convention(DeepLTextTranslationOptions())
+    }
+
     @Internal
     override fun isValid(): Boolean {
         return !authKey.orNull.isNullOrBlank()
@@ -33,5 +36,9 @@ abstract class DeepLConfig @Inject constructor(objects: ObjectFactory) : Provide
     @Internal
     override fun getConstraints(): String {
         return "'authKey' must be set"
+    }
+
+    override fun toLogString(): String {
+        return "DeepLConfig(authKey=${authKey.orNull}, options=${options.orNull?.toString()})"
     }
 }

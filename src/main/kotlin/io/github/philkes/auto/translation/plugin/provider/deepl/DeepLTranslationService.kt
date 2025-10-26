@@ -37,12 +37,17 @@ class DeepLTranslationService(
         return results.map { it.text }
     }
 
-    /** See https://developers.deepl.com/docs/getting-started/supported-languages */
-    override fun localeToApiString(locale: Locale): String {
-        return when (locale) {
-            Locale.SIMPLIFIED_CHINESE -> "ZH-HANS"
-            Locale.TRADITIONAL_CHINESE -> "ZH-HANT"
-            else -> locale.isoCode.uppercase()
-        }
+    /**
+     * See
+     * [DeepL Supported Languages](https://developers.deepl.com/docs/getting-started/supported-languages)
+     */
+    override fun localeToApiString(locale: Locale, isSourceLang: Boolean): String {
+        val isoCodeUppercase =
+            when (locale) {
+                Locale.SIMPLIFIED_CHINESE -> "ZH-HANS"
+                Locale.TRADITIONAL_CHINESE -> "ZH-HANT"
+                else -> locale.isoCode.uppercase()
+            }
+        return if (isSourceLang) isoCodeUppercase.substringBefore("-") else isoCodeUppercase
     }
 }
