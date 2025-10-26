@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     `kotlin-dsl`
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "2.2.0"
     `java-gradle-plugin`
     `maven-publish`
     id("com.gradle.plugin-publish") version "1.3.0"
@@ -23,6 +23,8 @@ dependencies {
     implementation("com.deepl.api:deepl-java:1.10.3")
     implementation("com.google.cloud:google-cloud-translate:2.77.0")
     implementation("com.azure:azure-ai-translation-text:1.1.6")
+    implementation("com.azure:azure-core-http-okhttp:1.13.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8")
     implementation("com.openai:openai-java:4.6.1")
 
     testImplementation(kotlin("test"))

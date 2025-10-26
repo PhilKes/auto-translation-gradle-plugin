@@ -21,10 +21,12 @@ class AzureTranslationService(private val service: TextTranslationClient) : Tran
             TranslateOptions()
                 .setSourceLanguage(sourceLanguage)
                 .addTargetLanguage(targetLanguage)
-                .setTextType(when(textFormat){
-                    TextFormat.TEXT -> TextType.PLAIN
-                    TextFormat.HTML -> TextType.HTML
-                })
+                .setTextType(
+                    when (textFormat) {
+                        TextFormat.TEXT -> TextType.PLAIN
+                        TextFormat.HTML -> TextType.HTML
+                    }
+                )
         val translations = service.translate(texts, translateOptions)
         return translations.map { it.translations.first().text }
     }

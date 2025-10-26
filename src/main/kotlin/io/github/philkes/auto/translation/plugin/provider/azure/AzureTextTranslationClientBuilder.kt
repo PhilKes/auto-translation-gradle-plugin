@@ -21,8 +21,7 @@ import java.time.Duration
 /**
  * A builder for creating a new instance of the TextTranslationClient type.
  *
- * Copy of
- * [TextTranslationClientBuilder] with the most important properties to make it serializable
+ * Copy of [TextTranslationClientBuilder] with the most important properties to make it serializable
  */
 class AzureTextTranslationClientBuilder : Serializable {
     var region: String? = null
@@ -37,80 +36,57 @@ class AzureTextTranslationClientBuilder : Serializable {
     var username: String? = null
     var password: String? = null
 
-    /**
-     * The logging level for HTTP requests and responses.
-     */
+    /** The logging level for HTTP requests and responses. */
     var httpLogLevel: HttpLogDetailLevel? = null
 
-    /**
-    * The logging level for HTTP requests and responses.
-    */
+    /** The logging level for HTTP requests and responses. */
     fun httpLogLevel(httpLogLevel: HttpLogDetailLevel): AzureTextTranslationClientBuilder {
         this.httpLogLevel = httpLogLevel
         return this
     }
 
-    /**
-     *  Flag indicating if distributed tracing should be enabled.
-     */
+    /** Flag indicating if distributed tracing should be enabled. */
     var tracingEnabled: Boolean? = null
 
-    /**
-     *  @see TracingOptions.setEnabled
-     */
+    /** @see TracingOptions.setEnabled */
     fun tracingEnabled(tracingEnabled: Boolean): AzureTextTranslationClientBuilder {
         this.tracingEnabled = tracingEnabled
         return this
     }
 
-    /**
-     *  Flag indicating if metrics should be enabled.
-     */
+    /** Flag indicating if metrics should be enabled. */
     var metricsEnabled: Boolean? = null
 
-    /**
-     *  @see MetricsOptions.setEnabled
-     */
+    /** @see MetricsOptions.setEnabled */
     fun metricsEnabled(metricsEnabled: Boolean): AzureTextTranslationClientBuilder {
         this.metricsEnabled = metricsEnabled
         return this
     }
-    /**
-     * The retry options to configure retry policy for failed requests.
-     */
+
+    /** The retry options to configure retry policy for failed requests. */
     var maxRetries: Int? = null
     var retryDelay: Duration? = null
 
-    /**
-     *  @see TextTranslationClientBuilder.retryOptions
-     */
+    /** @see TextTranslationClientBuilder.retryOptions */
     fun retryOptions(maxRetries: Int, delay: Duration): AzureTextTranslationClientBuilder {
         this.maxRetries = maxRetries
         this.retryDelay = delay
         return this
     }
 
-    /**
-     * The service endpoint
-     */
+    /** The service endpoint */
     var endpoint: String? = null
 
-    /**
-     *  @see TextTranslationClientBuilder.endpoint
-     */
+    /** @see TextTranslationClientBuilder.endpoint */
     fun endpoint(endpoint: String?): AzureTextTranslationClientBuilder {
         this.endpoint = endpoint
         return this
     }
 
-    /**
-     * Service version
-     */
+    /** Service version */
     var serviceVersion: TextTranslationServiceVersion? = null
 
-    /**
-     *  @see TextTranslationClientBuilder.serviceVersion
-     */
+    /** @see TextTranslationClientBuilder.serviceVersion */
     fun serviceVersion(
         serviceVersion: TextTranslationServiceVersion?
     ): AzureTextTranslationClientBuilder {
@@ -118,41 +94,31 @@ class AzureTextTranslationClientBuilder : Serializable {
         return this
     }
 
-    /**
-     *  @see TextTranslationClientBuilder.credential
-     */
+    /** @see TextTranslationClientBuilder.credential */
     fun credential(keyCredential: String): AzureTextTranslationClientBuilder {
         this.credential = keyCredential
         return this
     }
 
-    /**
-     *  @see TextTranslationClientBuilder.region
-     */
+    /** @see TextTranslationClientBuilder.region */
     fun region(region: String): AzureTextTranslationClientBuilder {
         this.region = region
         return this
     }
 
-    /**
-     *  @see TextTranslationClientBuilder.resourceId
-     */
+    /** @see TextTranslationClientBuilder.resourceId */
     fun resourceId(resourceId: String): AzureTextTranslationClientBuilder {
         this.resourceId = resourceId
         return this
     }
 
-    /**
-     *  @see TextTranslationClientBuilder.audience
-     */
+    /** @see TextTranslationClientBuilder.audience */
     fun audience(audience: String): AzureTextTranslationClientBuilder {
         this.audience = audience
         return this
     }
 
-    /**
-     *  @see TextTranslationClientBuilder.credential
-     */
+    /** @see TextTranslationClientBuilder.credential */
     fun credential(username: String, password: String): AzureTextTranslationClientBuilder {
         this.username = username
         this.password = password
@@ -168,19 +134,20 @@ fun AzureTextTranslationClientBuilder.toActualBuilder(): TextTranslationClientBu
     return TextTranslationClientBuilder().apply {
         httpLogLevel?.let { httpLogOptions(HttpLogOptions().setLogLevel(it)) }
         if (metricsEnabled != null || tracingEnabled != null) {
-            clientOptions(ClientOptions().apply {
-                metricsEnabled?.let { setMetricsOptions(MetricsOptions().setEnabled(it)) }
-                tracingEnabled?.let { setTracingOptions(TracingOptions().setEnabled(it)) }
-            })
+            clientOptions(
+                ClientOptions().apply {
+                    metricsEnabled?.let { setMetricsOptions(MetricsOptions().setEnabled(it)) }
+                    tracingEnabled?.let { setTracingOptions(TracingOptions().setEnabled(it)) }
+                }
+            )
         }
         maxRetries?.let { retryOptions(RetryOptions(FixedDelayOptions(it, retryDelay!!))) }
-        endpoint(endpoint)
-        serviceVersion(serviceVersion)
+        endpoint?.let { endpoint(it) }
+        serviceVersion?.let { serviceVersion(it) }
         credential?.let { credential(AzureKeyCredential(it)) }
-        region(region)
-        resourceId(resourceId)
+        region?.let { region(it) }
+        resourceId?.let { resourceId(it) }
         audience?.let { audience(TextTranslationAudience.fromString(it)) }
         username?.let { credential(BasicAuthenticationCredential(it, password)) }
     }
-
 }

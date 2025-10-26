@@ -16,7 +16,9 @@ abstract class AzureConfig @Inject constructor(objects: ObjectFactory) : Provide
      * At least [TextTranslationClientBuilder.credential] has to be set.
      *
      * (see
-     * [Azure/ai-translation-text-readme](https://learn.microsoft.com/en-us/java/api/overview/azure/ai-translation-text-readme?view=azure-java-stable#authentication))
+     * [Azure/ai-translation-text-readme](https://learn.microsoft.com/en-us/java/api/overview/azure/ai-translation-text-readme?view=azure-java-stable#authentication),
+     * [Text Translation API
+     * Reference](https://learn.microsoft.com/en-us/azure/ai-services/translator/text-translation/reference/v3/translate))
      */
     @get:Input
     val options: Property<AzureTextTranslationClientBuilder> =
@@ -30,5 +32,9 @@ abstract class AzureConfig @Inject constructor(objects: ObjectFactory) : Provide
     @Internal
     override fun getConstraints(): String {
         return "'options' must be set"
+    }
+
+    override fun toLogString(): String {
+        return "AzureConfig(options=${options.orNull?.toString()})"
     }
 }
