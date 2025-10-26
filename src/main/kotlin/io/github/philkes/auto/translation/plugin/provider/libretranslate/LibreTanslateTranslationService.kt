@@ -1,7 +1,7 @@
 package io.github.philkes.auto.translation.plugin.provider.libretranslate
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.philkes.auto.translation.plugin.config.LibreTranslateConfig
 import io.github.philkes.auto.translation.plugin.provider.TextFormat
 import io.github.philkes.auto.translation.plugin.provider.TranslationService
@@ -23,7 +23,11 @@ class LibreTanslateTranslationService(private val client: LibreTranslateClient) 
         targetLanguage: String,
     ): List<String> {
         // TODO: is there text format option?
-        return texts.map { client.translate(it, sourceLanguage, targetLanguage).translatedText }
+        return texts.map { text ->
+            val response = client.translate(text, sourceLanguage, targetLanguage)
+            response.error?.let { error -> throw IllegalArgumentException(error) }
+            response.translatedText!!
+        }
     }
 }
 
@@ -35,12 +39,12 @@ data class TranslateRequest(
     @JsonProperty("api_key") val apiKey: String? = null,
 )
 
-data class TranslateResponse(val translatedText: String)
+data class TranslateResponse(val translatedText: String?, val error: String?)
 
-/** See https://docs.libretranslate.com/guides/api_usage/ */
+/** See [LibreTranslate API Usage](https://docs.libretranslate.com/guides/api_usage/) */
 class LibreTranslateClient(private val config: LibreTranslateConfig) {
     private val httpClient: CloseableHttpClient = HttpClients.createDefault()
-    private val mapper = ObjectMapper()
+    private val mapper = jacksonObjectMapper()
 
     fun translate(text: String, source: String, target: String): TranslateResponse {
         val url = "${config.baseUrl.get().removeSuffix("/")}/translate"

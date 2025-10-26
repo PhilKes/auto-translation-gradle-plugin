@@ -35,4 +35,8 @@ abstract class LibreTranslateConfig @Inject constructor(objects: ObjectFactory) 
     override fun getConstraints(): String {
         return ""
     }
+
+    override fun toLogString(): String {
+        return "LibreTranslateConfig(baseUrl=${baseUrl.orNull}, apiKey=${apiKey.orNull})"
+    }
 }
