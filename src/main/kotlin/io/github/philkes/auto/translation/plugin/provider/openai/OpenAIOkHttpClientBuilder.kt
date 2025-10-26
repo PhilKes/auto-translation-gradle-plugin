@@ -8,8 +8,7 @@ import java.time.Duration
 /**
  * A builder for creating a new instance of the OpenAIOkHttpClient type.
  *
- * Copy of
- * [OpenAIOkHttpClient.Builder] with the most important properties to make it serializable
+ * Copy of [OpenAIOkHttpClient.Builder] with the most important properties to make it serializable
  */
 class OpenAIOkHttpClientBuilder : Serializable {
     var apiKey: String? = null
@@ -20,57 +19,43 @@ class OpenAIOkHttpClientBuilder : Serializable {
     var timeout: Duration? = null
     var maxRetries: Int? = null
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.apiKey
-     */
+    /** @see OpenAIOkHttpClient.Builder.apiKey */
     fun apiKey(apiKey: String): OpenAIOkHttpClientBuilder {
         this.apiKey = apiKey
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.credential
-     */
+    /** @see OpenAIOkHttpClient.Builder.credential */
     fun credential(azureApiKey: String): OpenAIOkHttpClientBuilder {
         this.azureApiKey = azureApiKey
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.baseUrl
-     */
+    /** @see OpenAIOkHttpClient.Builder.baseUrl */
     fun baseUrl(baseUrl: String): OpenAIOkHttpClientBuilder {
         this.baseUrl = baseUrl
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.organization
-     */
+    /** @see OpenAIOkHttpClient.Builder.organization */
     fun organization(organization: String): OpenAIOkHttpClientBuilder {
         this.organization = organization
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.project
-     */
+    /** @see OpenAIOkHttpClient.Builder.project */
     fun project(project: String): OpenAIOkHttpClientBuilder {
         this.project = project
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.timeout
-     */
+    /** @see OpenAIOkHttpClient.Builder.timeout */
     fun timeout(timeout: Duration): OpenAIOkHttpClientBuilder {
         this.timeout = timeout
         return this
     }
 
-    /**
-     * @see OpenAIOkHttpClient.Builder.maxRetries
-     */
+    /** @see OpenAIOkHttpClient.Builder.maxRetries */
     fun maxRetries(maxRetries: Int): OpenAIOkHttpClientBuilder {
         this.maxRetries = maxRetries
         return this
@@ -79,7 +64,6 @@ class OpenAIOkHttpClientBuilder : Serializable {
     override fun toString(): String {
         return "OpenAIOkHttpClientBuilder(apiKey=$apiKey, azureApiKey=$azureApiKey, baseUrl=$baseUrl, organization=$organization, project=$project, timeout=$timeout, maxRetries=$maxRetries)"
     }
-
 }
 
 fun OpenAIOkHttpClientBuilder.toActualBuilder(): OpenAIOkHttpClient.Builder {

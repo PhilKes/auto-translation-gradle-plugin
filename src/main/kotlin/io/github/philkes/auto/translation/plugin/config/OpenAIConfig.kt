@@ -52,4 +52,8 @@ abstract class OpenAIConfig @Inject constructor(objects: ObjectFactory) : Provid
     override fun getConstraints(): String {
         return "'options' must be set"
     }
+
+    override fun toLogString(): String {
+        return "OpenAIConfig(options=${options.orNull?.toString()}, model=${model.get()}, systemMessage=${systemMessage.get()})"
+    }
 }

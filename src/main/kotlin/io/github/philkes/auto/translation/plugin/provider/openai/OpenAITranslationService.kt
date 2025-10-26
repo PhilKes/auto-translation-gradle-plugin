@@ -1,6 +1,6 @@
 package io.github.philkes.auto.translation.plugin.provider.openai
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.openai.client.OpenAIClient
 import com.openai.models.chat.completions.ChatCompletionCreateParams
 import io.github.philkes.auto.translation.plugin.config.OpenAIConfig
@@ -16,9 +16,13 @@ class OpenAITranslationService(
 
     constructor(
         config: OpenAIConfig
-    ) : this(config.options.get().toActualBuilder().build(), config.model.get(), config.systemMessage.get())
+    ) : this(
+        config.options.get().toActualBuilder().build(),
+        config.model.get(),
+        config.systemMessage.get(),
+    )
 
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = jacksonObjectMapper()
     private val exampleMsg: String
     private val exampleResponse: String
 
