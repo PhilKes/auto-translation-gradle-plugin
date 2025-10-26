@@ -99,16 +99,15 @@ provider = deepL {
 
 #### Google
 ```kotlin
-import com.google.cloud.translate.TranslateOptions
+import io.github.philkes.auto.translation.plugin.provider.google.GoogleTranslateOptions
 //...
 provider = google {
     // Configure Google TranslateOptions, must set at least credential
-    options = TranslateOptions.newBuilder() 
+    options = GoogleTranslateOptions() 
                 // Google offers many different authentication methods, e.g. api key:
                 .setCredentials(ApiKeyCredentials.create("API_KEY"))
                 // E.g. set Google Project Id for quota and billing purposes
                 .setQuotaProjectId("XYZ")
-                .build()
     // (Optional) Specify model (e.g., "nmt" or "base")
     model = "base" // default
 }

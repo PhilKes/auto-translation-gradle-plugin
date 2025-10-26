@@ -8,7 +8,9 @@ import io.github.philkes.auto.translation.plugin.provider.TranslationService
 class GoogleTranslationService(private val service: Translate, private val model: String?) :
     TranslationService() {
 
-    constructor(config: GoogleConfig) : this(config.options.get().service, config.model.orNull)
+    constructor(
+        config: GoogleConfig
+    ) : this(config.options.get().toActualBuilder().build().service, config.model.orNull)
 
     override fun translateBatch(
         texts: List<String>,
@@ -20,10 +22,12 @@ class GoogleTranslationService(private val service: Translate, private val model
             arrayOf(
                 Translate.TranslateOption.sourceLanguage(sourceLanguage),
                 Translate.TranslateOption.targetLanguage(targetLanguage),
-                Translate.TranslateOption.format(when(textFormat){
-                    TextFormat.TEXT -> "text"
-                    TextFormat.HTML -> "html"
-                }),
+                Translate.TranslateOption.format(
+                    when (textFormat) {
+                        TextFormat.TEXT -> "text"
+                        TextFormat.HTML -> "html"
+                    }
+                ),
             )
         if (!model.isNullOrBlank()) {
             options += arrayOf(Translate.TranslateOption.model(model))

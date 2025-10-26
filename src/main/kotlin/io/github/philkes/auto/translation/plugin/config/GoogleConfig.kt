@@ -1,6 +1,7 @@
 package io.github.philkes.auto.translation.plugin.config
 
 import com.google.cloud.translate.TranslateOptions
+import io.github.philkes.auto.translation.plugin.provider.google.GoogleTranslateOptions
 import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -23,7 +24,8 @@ abstract class GoogleConfig @Inject constructor(objects: ObjectFactory) : Provid
      */
     @get:Input
     @get:Optional
-    val options: Property<TranslateOptions> = objects.property(TranslateOptions::class.java)
+    val options: Property<GoogleTranslateOptions> =
+        objects.property(GoogleTranslateOptions::class.java)
 
     /**
      * Overwrite model used for translation.
@@ -33,7 +35,7 @@ abstract class GoogleConfig @Inject constructor(objects: ObjectFactory) : Provid
     @get:Input @get:Optional val model: Property<String> = objects.property(String::class.java)
 
     init {
-        options.convention(TranslateOptions.getDefaultInstance())
+        options.convention(GoogleTranslateOptions())
     }
 
     @Internal
@@ -44,5 +46,9 @@ abstract class GoogleConfig @Inject constructor(objects: ObjectFactory) : Provid
     @Internal
     override fun getConstraints(): String {
         return "'options' must be set"
+    }
+
+    override fun toLogString(): String {
+        return "GoogleConfig(options=${options.orNull?.toString()}, model=${model.orNull})"
     }
 }
