@@ -47,18 +47,32 @@ open class FastlaneTranslationConfig @Inject constructor(objects: ObjectFactory)
     @get:Input
     @get:Optional
     val targetLanguages: SetProperty<String> = objects.setProperty(String::class.java)
-}
 
-internal fun FastlaneTranslationConfig.setDefaultValues(project: Project, task: AutoTranslateTask) {
-    enabled.convention(false)
-    metadataDirectory.convention(
-        enabled.map {
-            if (it) project.rootProject.layout.projectDirectory.dir("fastlane/metadata/android")
-            else project.layout.projectDirectory // TODO: Using some existing directory to not get a
-            // IllegalArgument
+    companion object {
+
+        internal fun default(
+            objects: ObjectFactory,
+            project: Project,
+            task: AutoTranslateTask,
+        ): FastlaneTranslationConfig {
+            return FastlaneTranslationConfig(objects).apply {
+                enabled.convention(false)
+                metadataDirectory.convention(
+                    enabled.map {
+                        if (it)
+                            project.rootProject.layout.projectDirectory.dir(
+                                "fastlane/metadata/android"
+                            )
+                        else
+                            project.layout
+                                .projectDirectory // TODO: Using some existing directory to not get
+                        // a
+                        // IllegalArgument
+                    }
+                )
+                sourceLanguage.convention(task.sourceLanguage)
+                targetLanguages.convention(task.targetLanguages)
+            }
         }
-    )
-
-    sourceLanguage.convention(task.sourceLanguage)
-    targetLanguages.convention(task.targetLanguages)
+    }
 }

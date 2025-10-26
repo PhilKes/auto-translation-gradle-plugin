@@ -8,29 +8,31 @@ import io.github.philkes.auto.translation.plugin.config.LibreTranslateConfig
 import io.github.philkes.auto.translation.plugin.config.OpenAIConfig
 import io.github.philkes.auto.translation.plugin.config.ProviderConfig
 import io.github.philkes.auto.translation.plugin.config.StringsXmlTranslationConfig
-import io.github.philkes.auto.translation.plugin.config.setDefaultValues
+import io.github.philkes.auto.translation.plugin.provider.TestTranslationService
+import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import io.github.philkes.auto.translation.plugin.provider.azure.AzureTranslationService
 import io.github.philkes.auto.translation.plugin.provider.deepl.DeepLTranslationService
 import io.github.philkes.auto.translation.plugin.provider.google.GoogleTranslationService
 import io.github.philkes.auto.translation.plugin.provider.libretranslate.LibreTanslateTranslationService
 import io.github.philkes.auto.translation.plugin.provider.openai.OpenAITranslationService
-import io.github.philkes.auto.translation.plugin.provider.TestTranslationService
-import io.github.philkes.auto.translation.plugin.provider.TranslationService
 import io.github.philkes.auto.translation.plugin.util.isUnitTest
+import io.github.philkes.auto.translation.plugin.util.listStringsXmlFilesRecursively
+import io.github.philkes.auto.translation.plugin.util.listTxtFilesRecursively
 import io.github.philkes.auto.translation.plugin.util.readableClassName
 import io.github.philkes.auto.translation.plugin.util.toIsoLocale
+import java.io.File
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 
 /** Translates all missing strings.xml Strings via external translation provider. */
@@ -76,13 +78,9 @@ abstract class AutoTranslateTask @Inject constructor(objects: ObjectFactory) : D
     /** Specify which translation provider to use and set it's options. */
     @get:Nested abstract val provider: Property<ProviderConfig>
 
-    @get:Optional
-    @get:OutputDirectory
-    abstract val changedStringsXmls: DirectoryProperty
+    @get:Optional @get:OutputFiles abstract val changedStringsXmls: ListProperty<File>
 
-    @get:Optional
-    @get:OutputDirectory
-    abstract val changedFastlaneFiles: DirectoryProperty
+    @get:Optional @get:OutputFiles abstract val changedFastlaneFiles: ListProperty<File>
 
     init {
         description = "Auto-translate Android strings.xml files"
@@ -91,30 +89,20 @@ abstract class AutoTranslateTask @Inject constructor(objects: ObjectFactory) : D
         sourceLanguage.convention("en-US")
         targetLanguages.convention(emptySet<String>())
         excludeLanguages.convention(emptySet<String>())
-        translateStringsXml.convention(
-            objects.property(StringsXmlTranslationConfig::class.java).apply {
-                val cfg = project.objects.newInstance(StringsXmlTranslationConfig::class.java)
-                cfg.setDefaultValues(project, this@AutoTranslateTask)
+        translateStringsXml.convention(StringsXmlTranslationConfig.default(objects, project, this))
+        translateFastlane.convention(FastlaneTranslationConfig.default(objects, project, this))
+        changedStringsXmls.convention(
+            translateStringsXml.flatMap {
+                it.resDirectory.map { resDir -> resDir.asFile.listStringsXmlFilesRecursively() }
             }
         )
-        translateFastlane.convention(
-            objects.property(FastlaneTranslationConfig::class.java).apply {
-                logger.lifecycle("CONVENTION")
-                val config = FastlaneTranslationConfig(objects)
-                config.setDefaultValues(project, this@AutoTranslateTask)
+        changedFastlaneFiles.convention(
+            translateFastlane.flatMap {
+                it.metadataDirectory.map { metadataDirectory ->
+                    metadataDirectory.asFile.listTxtFilesRecursively()
+                }
             }
         )
-
-        changedStringsXmls.convention(translateStringsXml.flatMap {
-            it.resDirectory.map { resDir ->
-                resDir
-            }
-        })
-        changedFastlaneFiles.convention(translateFastlane.flatMap {
-            it.metadataDirectory.map { metadataDirectory ->
-                metadataDirectory
-            }
-        })
     }
 
     @TaskAction
@@ -132,12 +120,15 @@ abstract class AutoTranslateTask @Inject constructor(objects: ObjectFactory) : D
         val translationService: TranslationService = createTranslationService(provider)
 
         val taskExcludeLanguages = excludeLanguages.get()
+        logger.lifecycle("translateStringsXml: ${translateStringsXml.get()}")
         // Strings.xml translation via wrapper config (enabled by default)
         translateStringsXml.orNull?.let { stringsXmlConfig ->
             val stringsEnabled = stringsXmlConfig.enabled.orNull ?: true
             if (stringsEnabled) {
-                val resDir = (stringsXmlConfig.resDirectory.orNull
-                    ?: project.layout.projectDirectory.dir("src/main/res")).asFile
+                val resDir =
+                    (stringsXmlConfig.resDirectory.orNull
+                            ?: project.layout.projectDirectory.dir("src/main/res"))
+                        .asFile
                 if (!resDir.exists()) {
                     throw GradleException(
                         "Provided translateStringsXml 'resDirectory' does not exist: $resDir"
@@ -165,20 +156,24 @@ abstract class AutoTranslateTask @Inject constructor(objects: ObjectFactory) : D
         translateFastlane.orNull?.let { fastlaneConfig ->
             val fastlaneEnabled = fastlaneConfig.enabled.orNull ?: false
             if (fastlaneEnabled) {
-                val metaDir = (fastlaneConfig.metadataDirectory.orNull
-                    ?: project.layout.projectDirectory.dir("fastlane/metadata/android")).asFile
+                val metaDir =
+                    (fastlaneConfig.metadataDirectory.orNull
+                            ?: project.layout.projectDirectory.dir("fastlane/metadata/android"))
+                        .asFile
                 if (!metaDir.exists()) {
                     throw GradleException(
                         "Provided translateFastlane 'metadataDirectory' does not exist: $metaDir"
                     )
                 }
-                val fastlaneSrcLang = (fastlaneConfig.sourceLanguage.orNull ?: sourceLanguage.get()).toIsoLocale()
+                val fastlaneSrcLang =
+                    (fastlaneConfig.sourceLanguage.orNull ?: sourceLanguage.get()).toIsoLocale()
                 if (fastlaneSrcLang == null) {
                     throw GradleException(
                         "Non ISO Code fastlaneConfig 'sourceLanguage' provided: '${fastlaneConfig.sourceLanguage.orNull}'"
                     )
                 }
-                val fastlaneTargetLanguages = fastlaneConfig.targetLanguages.orNull ?: targetLanguages.get()
+                val fastlaneTargetLanguages =
+                    fastlaneConfig.targetLanguages.orNull ?: targetLanguages.get()
                 logger.log(
                     LogLevel.LIFECYCLE,
                     "translateFastlane: provider=${provider.readableClassName}, metadataDirectory=${metaDir}, sourceLanguage=$srcLang, targetLanguages=$fastlaneTargetLanguages, excludeLanguages=$taskExcludeLanguages",
@@ -202,6 +197,7 @@ abstract class AutoTranslateTask @Inject constructor(objects: ObjectFactory) : D
             return TestTranslationService()
         }
         try {
+            logger.debug("Provider: ${provider.toLogString()}")
             return when (provider) {
                 is DeepLConfig -> DeepLTranslationService(provider)
                 is GoogleConfig -> GoogleTranslationService(provider)

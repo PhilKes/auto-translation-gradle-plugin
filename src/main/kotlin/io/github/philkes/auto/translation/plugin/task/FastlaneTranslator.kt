@@ -2,6 +2,7 @@ package io.github.philkes.auto.translation.plugin.task
 
 import io.github.philkes.auto.translation.plugin.provider.TextFormat
 import io.github.philkes.auto.translation.plugin.provider.TranslationService
+import io.github.philkes.auto.translation.plugin.util.listTxtFilesRecursively
 import io.github.philkes.auto.translation.plugin.util.toIsoLocale
 import java.io.File
 import java.util.Locale
@@ -29,7 +30,8 @@ class FastlaneTranslator(private val logger: Logger) {
         if (!metadataRoot.exists()) {
             if (log)
                 logger.lifecycle(
-                    "Fastlane metadata directory does not exist: ${metadataRoot.absolutePath}. Skipping.")
+                    "Fastlane metadata directory does not exist: ${metadataRoot.absolutePath}. Skipping."
+                )
             return emptyList()
         }
         val allLocaleDirs = metadataRoot.listFiles()?.filter { it.isDirectory } ?: emptyList()
@@ -41,14 +43,16 @@ class FastlaneTranslator(private val logger: Logger) {
         if (sourceDir == null) {
             if (log)
                 logger.lifecycle(
-                    "No Fastlane source folder matching sourceLanguage=${srcLang} found. Skipping Fastlane translation.")
+                    "No Fastlane source folder matching sourceLanguage=${srcLang} found. Skipping Fastlane translation."
+                )
             return emptyList()
         }
         val sourceFiles = sourceDir.listTxtFilesRecursively()
         if (sourceFiles.isEmpty()) {
             if (log)
                 logger.lifecycle(
-                    "No .txt files found in Fastlane source folder '${sourceDir.name}'. Nothing to translate.")
+                    "No .txt files found in Fastlane source folder '${sourceDir.name}'. Nothing to translate."
+                )
             return emptyList()
         }
 
@@ -74,11 +78,12 @@ class FastlaneTranslator(private val logger: Logger) {
 
         val missingOutputs = ArrayList<File>()
         targets.forEach { (_, targetCode) ->
-            val mappings = sourceFiles.map { src ->
-                val relative = src.relativeTo(sourceDir).path
-                val outFile = File(metadataRoot, "$targetCode/$relative")
-                FileMapping(src, relative, outFile)
-            }
+            val mappings =
+                sourceFiles.map { src ->
+                    val relative = src.relativeTo(sourceDir).path
+                    val outFile = File(metadataRoot, "$targetCode/$relative")
+                    FileMapping(src, relative, outFile)
+                }
             missingOutputs += mappings.filter { (_, _, out) -> !out.exists() }.map { it.out }
         }
         return missingOutputs
@@ -146,14 +151,17 @@ class FastlaneTranslator(private val logger: Logger) {
         // For each target, translate only missing files and write
         targets.forEach { (targetLocale, targetCode) ->
             // Build list of source -> target file mappings
-            val mappings = sourceFiles.map { src ->
-                val relative = src.relativeTo(sourceDir).path
-                val outFile = File(metadataRoot, "$targetCode/$relative")
-                FileMapping(src, relative, outFile)
-            }
+            val mappings =
+                sourceFiles.map { src ->
+                    val relative = src.relativeTo(sourceDir).path
+                    val outFile = File(metadataRoot, "$targetCode/$relative")
+                    FileMapping(src, relative, outFile)
+                }
             val missing = mappings.filter { (_, _, out) -> !out.exists() }
             if (missing.isEmpty()) {
-                logger.lifecycle("[Fastlane:$targetCode] All ${sourceFiles.size} .txt files already exist. Skipping.")
+                logger.lifecycle(
+                    "[Fastlane:$targetCode] All ${sourceFiles.size} .txt files already exist. Skipping."
+                )
                 return@forEach
             }
 
@@ -179,9 +187,5 @@ class FastlaneTranslator(private val logger: Logger) {
 
     private fun List<File>.findLocaleFolder(srcLang: Locale): File? {
         return firstOrNull { dir -> dir.name.toIsoLocale()?.equals(srcLang) == true }
-    }
-
-    private fun File.listTxtFilesRecursively(): List<File> {
-        return walkTopDown().filter { it.isFile && it.extension == "txt" }.toList()
     }
 }

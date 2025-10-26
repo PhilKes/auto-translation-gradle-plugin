@@ -18,9 +18,7 @@ open class StringsXmlTranslationConfig @Inject constructor(objects: ObjectFactor
      *
      * Defaults to `true`
      */
-    @get:Input
-    @get:Optional
-    val enabled: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:Input @get:Optional val enabled: Property<Boolean> = objects.property(Boolean::class.java)
 
     /**
      * Path to the folder containing the `values/strings.xml` and `values-{targetLanguage}` folders.
@@ -30,16 +28,24 @@ open class StringsXmlTranslationConfig @Inject constructor(objects: ObjectFactor
     @get:InputDirectory
     @get:Optional
     val resDirectory: DirectoryProperty = objects.directoryProperty()
-}
 
-internal fun StringsXmlTranslationConfig.setDefaultValues(
-    project: Project,
-    task: AutoTranslateTask,
-) {
-    enabled.convention(true)
-    resDirectory.convention( enabled.map {
-        if (it) {
-            project.layout.projectDirectory.dir("src/main/res")
-        } else project.layout.projectDirectory
-    })
+    companion object {
+
+        internal fun default(
+            objects: ObjectFactory,
+            project: Project,
+            task: AutoTranslateTask,
+        ): StringsXmlTranslationConfig {
+            return StringsXmlTranslationConfig(objects).apply {
+                enabled.convention(true)
+                resDirectory.convention(
+                    enabled.map {
+                        if (it) {
+                            project.layout.projectDirectory.dir("src/main/res")
+                        } else project.layout.projectDirectory
+                    }
+                )
+            }
+        }
+    }
 }

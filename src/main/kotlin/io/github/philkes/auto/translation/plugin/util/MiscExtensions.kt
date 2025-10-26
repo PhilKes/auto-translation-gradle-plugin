@@ -1,5 +1,6 @@
 package io.github.philkes.auto.translation.plugin.util
 
+import java.io.File
 import java.util.Locale
 
 fun String.toIsoLocale(): Locale? {
@@ -38,5 +39,14 @@ val Locale.androidCode: String
 val Locale.isoCode: String
     get() = ("${language}${"-${country}".takeIf { !country.isNullOrBlank() } ?: ""}")
 
-
 val DOLLAR = "\$"
+
+fun File.listTxtFilesRecursively(): List<File> {
+    return walkTopDown().filter { it.isFile && it.extension == "txt" }.toList()
+}
+
+fun File.listStringsXmlFilesRecursively(): List<File> {
+    return walkTopDown()
+        .filter { it.isFile && it.nameWithoutExtension == "strings" && it.extension == "xml" }
+        .toList()
+}

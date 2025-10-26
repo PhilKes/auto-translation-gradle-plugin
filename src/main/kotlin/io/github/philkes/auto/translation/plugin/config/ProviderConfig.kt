@@ -6,4 +6,6 @@ sealed interface ProviderConfig {
     @Internal fun isValid(): Boolean
 
     @Internal fun getConstraints(): String
+
+    @Internal fun toLogString(): String
 }
